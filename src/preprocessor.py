@@ -1,5 +1,6 @@
 from typing import List, Tuple
 import pandas as pd
+from sklearn.model_selection import train_test_split
 
 # Standard column definitions
 FEATURE_COLS: List[str] = [
@@ -85,3 +86,31 @@ def prepare_data(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
     y = data[TARGET_COLS].copy().astype(int)
 
     return X, y
+
+
+def split_data(
+    X: pd.DataFrame,
+    y: pd.DataFrame,
+    test_size: float = 0.2,
+    random_state: int = 42,
+) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """
+    Split feature matrix X and target DataFrame y into train and test sets.
+
+    Parameters:
+        X (pd.DataFrame): Feature matrix.
+        y (pd.DataFrame): Target variables DataFrame.
+        test_size (float): Proportion of dataset to include in test split. Defaults to 0.2.
+        random_state (int): Random seed for reproducibility. Defaults to 42.
+
+    Returns:
+        Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+            (X_train, X_test, y_train, y_test)
+    """
+    return train_test_split(
+        X,
+        y,
+        test_size=test_size,
+        random_state=random_state,
+    )
+
