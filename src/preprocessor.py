@@ -41,7 +41,7 @@ def prepare_data(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
     Steps performed:
     1. Validates presence of expected feature and target columns.
     2. Handles missing values (imputes numerical columns with median, fills missing categoricals with 'Missing').
-    3. Formats categorical columns as strings for seamless CatBoost handling.
+    3. Formats categorical columns as strings for encoding.
     4. Separates dataset into feature matrix X and target DataFrame y.
 
     Parameters:
@@ -74,7 +74,7 @@ def prepare_data(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
             median_val = data[col].median()
             data[col] = data[col].fillna(median_val)
 
-    # Handle categorical features and format as string for CatBoost
+    # Handle categorical features and format as string
     for col in CATEGORICAL_COLS:
         data[col] = data[col].fillna("Missing").astype(str)
 
