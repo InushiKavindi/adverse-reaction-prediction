@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.multioutput import MultiOutputClassifier
+from sklearn.multioutput import ClassifierChain, MultiOutputClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder
 
@@ -28,8 +28,8 @@ def train_model(
     Train a multi-label Random Forest classification model for adverse reaction prediction.
 
     Uses a scikit-learn Pipeline containing a ColumnTransformer with OneHotEncoder
-    for categorical features, followed by a MultiOutputClassifier wrapping
-    RandomForestClassifier to train independent binary classifiers for each adverse symptom target.
+    for categorical features, followed by a ClassifierChain wrapping
+    RandomForestClassifier to capture label dependencies for each adverse symptom target.
 
     Parameters:
         X_train (pd.DataFrame): Training feature matrix.
@@ -41,7 +41,7 @@ def train_model(
         random_seed (int): Random seed for reproducibility. Defaults to 42.
 
     Returns:
-        Pipeline: Fitted scikit-learn Pipeline containing preprocessor and MultiOutputClassifier.
+        Pipeline: Fitted scikit-learn Pipeline containing preprocessor and ClassifierChain.
     """
     if categorical_features is None:
         categorical_features = [
@@ -68,8 +68,8 @@ def train_model(
         **kwargs,
     )
 
-    # MultiOutputClassifier fits one estimator per target column
-    multi_target_model = MultiOutputClassifier(estimator=base_estimator)
+    # ClassifierChain captures dependencies between symptom labels
+    multi_target_model = ClassifierChain(base_estimator, order="random", random_state=random_seed)
 
     # Complete pipeline with preprocessing and multi-label classifier
     model_pipeline = Pipeline(
@@ -85,17 +85,60 @@ def train_model(
 
 
 def predict(
-    model: Union[Pipeline, MultiOutputClassifier],
+    model: Union[Pipeline, ClassifierChain, MultiOutputClassifier],
     X_test: pd.DataFrame,
 ) -> np.ndarray:
     """
-    Generate multi-label binary symptom predictions for test data.
+    Generate multi-label binary symptom predictions for test data with logical post-processing.
 
     Parameters:
-        model (Pipeline | MultiOutputClassifier): Trained multi-label model pipeline.
+        model (Pipeline | ClassifierChain | MultiOutputClassifier): Trained multi-label model pipeline.
         X_test (pd.DataFrame): Feature matrix for test/evaluation samples.
 
     Returns:
         np.ndarray: Predicted binary indicator matrix (shape: [n_samples, n_targets]).
     """
-    return np.asarray(model.predict(X_test))
+    y_pred = np.asarray(model.predict(X_test))
+
+    # Logical Post-Processing
+    # TARGET_COLS = ["fever", "swelling", "pain", "irritability", "rash", "vomiting", "no_reaction", "others"]
+    # 'no_reaction' is at index 6.
+    if y_pred.shape[1] == 8:
+        no_reaction_idx = 6
+        # Find if any active symptom (indices 0-5, 7) is predicted as 1
+        active_symptoms_mask = (np.delete(y_pred, no_reaction_idx, axis=1) == 1).any(axis=1)
+        
+        # Rule 1: If any active symptom is present, no_reaction must be 0
+        y_pred[active_symptoms_mask, no_reaction_idx] = 0
+        
+        # Rule 2: If no active symptoms are present, no_reaction must be 1
+        y_pred[~active_symptoms_mask, no_reaction_idx] = 1
+
+    return y_pred
+
+
+def predict_proba(
+    model: Union[Pipeline, ClassifierChain, MultiOutputClassifier],
+    X_test: pd.DataFrame,
+) -> np.ndarray:
+    """
+    Generate probability scores for each symptom.
+
+    Parameters:
+        model (Pipeline | ClassifierChain | MultiOutputClassifier): Trained model pipeline.
+        X_test (pd.DataFrame): Feature matrix.
+
+    Returns:
+        np.ndarray: Predicted probability matrix (shape: [n_samples, n_targets]).
+    """
+    if hasattr(model, "predict_proba"):
+        # ClassifierChain predict_proba returns an array of shape (n_samples, n_targets)
+        proba = model.predict_proba(X_test)
+        if isinstance(proba, list):
+            # For MultiOutputClassifier, predict_proba returns a list of arrays for each target
+            # Each array is shape (n_samples, 2), we want the probability of class 1
+            proba = np.column_stack([p[:, 1] for p in proba])
+        return proba
+    
+    # Fallback if model doesn't support probabilities directly
+    return np.asarray(model.predict(X_test), dtype=float)

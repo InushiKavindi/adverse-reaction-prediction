@@ -83,3 +83,77 @@ def evaluate_model(
         )
 
     return metrics
+
+
+def compare_predictions(
+    data: pd.DataFrame,
+    y_true: Union[pd.DataFrame, np.ndarray],
+    y_pred: Union[pd.DataFrame, np.ndarray],
+    target_names: Optional[List[str]] = None,
+) -> pd.DataFrame:
+    """
+    Combine original CSV data with ground truth and model predictions to identify
+    exact correct vs. incorrect predictions for each test sample.
+
+    Parameters:
+        data (pd.DataFrame): Original DataFrame (or X_test) with indices corresponding to original CSV rows.
+        y_true (pd.DataFrame | np.ndarray): Ground truth binary labels.
+        y_pred (pd.DataFrame | np.ndarray): Predicted binary labels.
+        target_names (List[str], optional): List of target column names. Inferred if y_true is a DataFrame.
+
+    Returns:
+        pd.DataFrame: Comparison DataFrame with columns:
+            - csv_line_number: Line number in the original CSV file (index + 2)
+            - Original feature columns
+            - actual_symptoms: List of symptoms actually present
+            - predicted_symptoms: List of symptoms predicted by model
+            - is_exact_match: True if all target predictions match ground truth
+            - false_positives: Symptoms falsely predicted
+            - false_negatives: Symptoms missed by the model
+            - pred_<target>: Individual binary predictions for each target
+    """
+    if target_names is None:
+        if isinstance(y_true, pd.DataFrame):
+            target_names = list(y_true.columns)
+        else:
+            raise ValueError("target_names must be provided if y_true is not a DataFrame")
+
+    index = y_true.index if isinstance(y_true, pd.DataFrame) else data.index
+    y_true_df = pd.DataFrame(y_true, columns=target_names, index=index) if not isinstance(y_true, pd.DataFrame) else y_true
+    y_pred_df = pd.DataFrame(y_pred, columns=target_names, index=index)
+
+    # Base features from the provided DataFrame for the matching indices
+    matched_data = data.loc[index].copy()
+
+    records = []
+    for idx in index:
+        actual = [col for col in target_names if y_true_df.loc[idx, col] == 1]
+        predicted = [col for col in target_names if y_pred_df.loc[idx, col] == 1]
+
+        fp = [col for col in predicted if col not in actual]  # Overpredicted
+        fn = [col for col in actual if col not in predicted]  # Missed
+        is_exact = (actual == predicted)
+
+        # CSV line number (0-indexed index + 2 for header)
+        csv_line = int(idx) + 2 if isinstance(idx, (int, np.integer)) else idx
+
+        row_dict = {
+            "csv_row_index": idx,
+            "csv_line_number": csv_line,
+            "actual_symptoms": actual if actual else ["no_symptoms"],
+            "predicted_symptoms": predicted if predicted else ["no_symptoms"],
+            "is_exact_match": is_exact,
+            "false_positives": fp,
+            "false_negatives": fn,
+        }
+
+        # Add individual pred_<target> columns
+        for col in target_names:
+            row_dict[f"pred_{col}"] = int(y_pred_df.loc[idx, col])
+
+        records.append(row_dict)
+
+    comparison_details = pd.DataFrame(records, index=index)
+    result_df = pd.concat([matched_data, comparison_details], axis=1)
+
+    return result_df
