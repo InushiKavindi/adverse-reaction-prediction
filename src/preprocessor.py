@@ -7,15 +7,14 @@ FEATURE_COLS: List[str] = [
     "age_months",
     "sex",
     "vaccine_type",
-    "dose_number",
     "previous_reaction",
 ]
 
 TARGET_COLS: List[str] = [
     "fever",
     "swelling",
+    "redness",
     "pain",
-    "irritability",
     "rash",
     "vomiting",
     "no_reaction",
@@ -30,7 +29,6 @@ CATEGORICAL_COLS: List[str] = [
 
 NUMERIC_COLS: List[str] = [
     "age_months",
-    "dose_number",
 ]
 
 

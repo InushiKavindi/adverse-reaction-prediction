@@ -19,7 +19,7 @@ def run_pipeline() -> None:
     print("=" * 60)
 
     # 1. Load Data
-    data_path = PROJECT_ROOT / "data" / "sample_data.csv"
+    data_path = PROJECT_ROOT / "data" / "combined_schedule_data.csv"
     print(f"\n[1/5] Loading data from {data_path}...")
     df = load_data(data_path)
     print(f"Loaded {len(df)} records with {len(df.columns)} columns.")
@@ -38,7 +38,12 @@ def run_pipeline() -> None:
 
     # 4. Train Model
     print("\n[4/5] Training Random Forest multi-label symptom classification model...")
-    model = train_model(X_train, y_train, random_seed=42)
+    model = train_model(
+        X_train, y_train, 
+        random_seed=42,
+        max_depth=5,
+        min_samples_leaf=3
+    )
     print("Random Forest model training completed successfully.")
 
     # 5. Predict & Evaluate

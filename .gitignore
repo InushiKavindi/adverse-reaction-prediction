@@ -82,3 +82,10 @@ coverage.xml
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Datasets
+data/
+
+# Data generation scripts
+src/generate_data.py
+src/generate_combined_data.py

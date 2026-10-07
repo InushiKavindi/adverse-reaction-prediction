@@ -19,7 +19,7 @@ def train_model(
     X_train: pd.DataFrame,
     y_train: pd.DataFrame,
     categorical_features: Optional[List[str]] = None,
-    n_estimators: int = 100,
+    n_estimators: int = 200,
     max_depth: Optional[int] = None,
     random_seed: int = 42,
     **kwargs,
@@ -68,8 +68,8 @@ def train_model(
         **kwargs,
     )
 
-    # ClassifierChain captures dependencies between symptom labels
-    multi_target_model = ClassifierChain(base_estimator, order="random", random_state=random_seed)
+    # MultiOutputClassifier trains independent models for each symptom label
+    multi_target_model = MultiOutputClassifier(base_estimator, n_jobs=-1)
 
     # Complete pipeline with preprocessing and multi-label classifier
     model_pipeline = Pipeline(
