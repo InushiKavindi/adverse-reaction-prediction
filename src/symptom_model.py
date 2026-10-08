@@ -2,7 +2,7 @@ from typing import List, Optional, Union
 import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.multioutput import ClassifierChain, MultiOutputClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder
@@ -12,6 +12,8 @@ DEFAULT_CATEGORICAL_FEATURES: List[str] = [
     "sex",
     "vaccine_type",
     "previous_reaction",
+    "allergy",
+    "current_illness",
 ]
 
 
@@ -72,6 +74,53 @@ def train_model(
     multi_target_model = MultiOutputClassifier(base_estimator, n_jobs=-1)
 
     # Complete pipeline with preprocessing and multi-label classifier
+    model_pipeline = Pipeline(
+        steps=[
+            ("preprocessor", preprocessor),
+            ("classifier", multi_target_model),
+        ]
+    )
+
+    model_pipeline.fit(X_train, y_train)
+
+    return model_pipeline
+
+
+def train_gb_model(
+    X_train: pd.DataFrame,
+    y_train: pd.DataFrame,
+    categorical_features: Optional[List[str]] = None,
+    n_estimators: int = 100,
+    random_seed: int = 42,
+    **kwargs,
+) -> Pipeline:
+    """
+    Train a multi-label Gradient Boosting classification model for adverse reaction prediction.
+    """
+    if categorical_features is None:
+        categorical_features = [
+            col for col in DEFAULT_CATEGORICAL_FEATURES if col in X_train.columns
+        ]
+
+    preprocessor = ColumnTransformer(
+        transformers=[
+            (
+                "cat",
+                OneHotEncoder(handle_unknown="ignore", sparse_output=False),
+                categorical_features,
+            )
+        ],
+        remainder="passthrough",
+    )
+
+    base_estimator = GradientBoostingClassifier(
+        n_estimators=n_estimators,
+        random_state=random_seed,
+        **kwargs,
+    )
+
+    multi_target_model = ClassifierChain(base_estimator, order='random', random_state=random_seed)
+
     model_pipeline = Pipeline(
         steps=[
             ("preprocessor", preprocessor),

@@ -19,7 +19,7 @@ def run_pipeline() -> None:
     print("=" * 60)
 
     # 1. Load Data
-    data_path = PROJECT_ROOT / "data" / "combined_schedule_data.csv"
+    data_path = PROJECT_ROOT / "data" / "real-data.csv"
     print(f"\n[1/5] Loading data from {data_path}...")
     df = load_data(data_path)
     print(f"Loaded {len(df)} records with {len(df.columns)} columns.")

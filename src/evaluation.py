@@ -1,7 +1,7 @@
 from typing import Any, Dict, List, Optional, Union
 import numpy as np
 import pandas as pd
-from sklearn.metrics import classification_report, f1_score, precision_score, recall_score
+from sklearn.metrics import classification_report, f1_score, precision_score, recall_score, accuracy_score
 
 
 def evaluate_model(
@@ -27,6 +27,7 @@ def evaluate_model(
         target_names = list(y_true.columns)
 
     # Compute overall multi-label metrics
+    accuracy = accuracy_score(y_true, y_pred)
     precision_macro = precision_score(y_true, y_pred, average="macro", zero_division=0)
     recall_macro = recall_score(y_true, y_pred, average="macro", zero_division=0)
     f1_macro = f1_score(y_true, y_pred, average="macro", zero_division=0)
@@ -48,6 +49,7 @@ def evaluate_model(
     )
 
     metrics: Dict[str, Any] = {
+        "accuracy": float(accuracy),
         "precision_macro": float(precision_macro),
         "recall_macro": float(recall_macro),
         "f1_macro": float(f1_macro),
@@ -64,6 +66,8 @@ def evaluate_model(
         print("=" * 60)
         print("MULTI-LABEL SYMPTOM MODEL EVALUATION SUMMARY")
         print("=" * 60)
+        print(f"Overall Exact Match Accuracy: {accuracy * 100:.2f}%")
+        print("-" * 60)
         print(f"Precision (Macro):   {precision_macro:.4f}")
         print(f"Recall (Macro):      {recall_macro:.4f}")
         print(f"F1-Score (Macro):    {f1_macro:.4f}")

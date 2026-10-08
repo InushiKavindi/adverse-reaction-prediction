@@ -8,6 +8,8 @@ FEATURE_COLS: List[str] = [
     "sex",
     "vaccine_type",
     "previous_reaction",
+    "allergy",
+    "current_illness",
 ]
 
 TARGET_COLS: List[str] = [
@@ -25,6 +27,8 @@ CATEGORICAL_COLS: List[str] = [
     "sex",
     "vaccine_type",
     "previous_reaction",
+    "allergy",
+    "current_illness",
 ]
 
 NUMERIC_COLS: List[str] = [
