@@ -41,8 +41,9 @@ def run_pipeline() -> None:
     model = train_model(
         X_train, y_train, 
         random_seed=42,
-        max_depth=5,
-        min_samples_leaf=3
+        n_estimators=200,
+        max_depth=3,
+        min_samples_leaf=1
     )
     print("Random Forest model training completed successfully.")
 

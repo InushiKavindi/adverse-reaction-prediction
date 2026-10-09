@@ -41,11 +41,11 @@ def run_pipeline() -> None:
     gb_model = train_gb_model(
         X_train, y_train, 
         random_seed=42,
-        n_estimators=200,
-        learning_rate=0.05,
-        max_depth=5,
+        n_estimators=300,
+        learning_rate=0.01,
+        max_depth=1,
         subsample=0.8,
-        min_samples_leaf=2
+        min_samples_leaf=5
     )
     print("Gradient Boosting model training completed successfully.")
 

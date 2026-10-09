@@ -6,6 +6,7 @@ from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.multioutput import ClassifierChain, MultiOutputClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder
+from catboost import CatBoostClassifier
 
 # Default categorical feature column names
 DEFAULT_CATEGORICAL_FEATURES: List[str] = [
@@ -116,6 +117,54 @@ def train_gb_model(
     base_estimator = GradientBoostingClassifier(
         n_estimators=n_estimators,
         random_state=random_seed,
+        **kwargs,
+    )
+
+    multi_target_model = ClassifierChain(base_estimator, order='random', random_state=random_seed)
+
+    model_pipeline = Pipeline(
+        steps=[
+            ("preprocessor", preprocessor),
+            ("classifier", multi_target_model),
+        ]
+    )
+
+    model_pipeline.fit(X_train, y_train)
+
+    return model_pipeline
+
+
+def train_cb_model(
+    X_train: pd.DataFrame,
+    y_train: pd.DataFrame,
+    categorical_features: Optional[List[str]] = None,
+    iterations: int = 100,
+    random_seed: int = 42,
+    **kwargs,
+) -> Pipeline:
+    """
+    Train a multi-label CatBoost classification model for adverse reaction prediction.
+    """
+    if categorical_features is None:
+        categorical_features = [
+            col for col in DEFAULT_CATEGORICAL_FEATURES if col in X_train.columns
+        ]
+
+    preprocessor = ColumnTransformer(
+        transformers=[
+            (
+                "cat",
+                OneHotEncoder(handle_unknown="ignore", sparse_output=False),
+                categorical_features,
+            )
+        ],
+        remainder="passthrough",
+    )
+
+    base_estimator = CatBoostClassifier(
+        iterations=iterations,
+        random_seed=random_seed,
+        verbose=False,
         **kwargs,
     )
 
