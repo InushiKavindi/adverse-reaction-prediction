@@ -83,25 +83,71 @@ def run_pipeline() -> None:
     display_cols = ["csv_line_number", "vaccine_type", "actual_symptoms", "predicted_symptoms", "is_exact_match"]
     print(comparison_df[display_cols].to_string(index=False))
 
-    # Demonstrate probability scoring for the first test sample
+    # Demonstrate probability scoring for random test samples
     print("\n" + "=" * 60)
     print("PROBABILITY SCORE DEMONSTRATION (CatBoost)")
     print("=" * 60)
     
     from src.symptom_model import predict_proba
+    import random
     y_proba = predict_proba(cb_model, X_test)
     
-    sample_idx = 0
-    print(f"Sample features: {X_test.iloc[sample_idx].to_dict()}")
-    print("Possible reactions predicted as scores:")
+    # Pick 3 random samples to show variety
+    random_indices = random.sample(range(len(X_test)), 3)
     
-    sample_probs = y_proba[sample_idx]
+    for i, sample_idx in enumerate(random_indices, 1):
+        print(f"\n--- Random Test Sample {i} ---")
+        print(f"Features: {X_test.iloc[sample_idx].to_dict()}")
+        
+        sample_probs = y_proba[sample_idx]
+        
+        # Sort by probability descending
+        scored_symptoms = [(TARGET_COLS[j].replace('_', ' ').title(), sample_probs[j]) for j in range(len(TARGET_COLS))]
+        scored_symptoms.sort(key=lambda x: x[1], reverse=True)
+        
+        print("Predicted reactions:")
+        for symptom_name, prob in scored_symptoms:
+            if prob >= 0.01: # Show if 1% or higher
+                print(f"  {symptom_name} ({prob * 100:.0f}%)")
+
+    # ----- CUSTOM CASE PREDICTION -----
+    print("\n" + "=" * 60)
+    print("CUSTOM CASE PREDICTION DEMONSTRATION")
+    print("=" * 60)
     
-    # Sort by probability descending
-    scored_symptoms = [(TARGET_COLS[i].replace('_', ' ').title(), sample_probs[i]) for i in range(len(TARGET_COLS))]
-    scored_symptoms.sort(key=lambda x: x[1], reverse=True)
+    # You can change these values to test different cases!
+    custom_patient = {
+        'age_months': 0, 
+        'sex': 'F', 
+        'vaccine_type': 'BCG', 
+        'previous_reaction': 'No', 
+        'allergy': 'No', 
+        'current_illness': 'Yes'
+    }
     
-    for symptom_name, prob in scored_symptoms:
+    # Convert to DataFrame
+    custom_df = pd.DataFrame([custom_patient])
+    
+    # We must ensure all columns exist in the same order as X_train. 
+    # Any missing one-hot encoded columns (if used in prepare_data) should be handled.
+    # We will pass this custom dictionary through the same `prepare_data` logic to be safe.
+    # Note: prepare_data currently returns X and y. For inference on new data, 
+    # the training pipeline typically uses a ColumnTransformer.
+    # Because prepare_data handles the encoding (and we don't have targets), 
+    # we'll build a dummy target and pass it to prepare_data.
+    
+    # For a quick test since CatBoost can handle categoricals natively if specified 
+    # (assuming src.symptom_model uses CatBoostClassifier's cat_features), 
+    # we can just use the custom_df directly.
+    custom_probs = predict_proba(cb_model, custom_df)[0]
+    
+    print(f"Custom features: {custom_patient}")
+    print("Predicted reactions for this custom case:")
+    
+    custom_scored_symptoms = [(TARGET_COLS[i].replace('_', ' ').title(), custom_probs[i]) for i in range(len(TARGET_COLS))]
+    custom_scored_symptoms.sort(key=lambda x: x[1], reverse=True)
+    
+    for symptom_name, prob in custom_scored_symptoms:
         print(f"{symptom_name} ({prob * 100:.0f}%)")
 
 
