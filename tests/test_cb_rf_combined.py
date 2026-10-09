@@ -9,6 +9,8 @@ from src.data_loader import load_data
 from src.preprocessor import prepare_data, prepare_regression_data, split_data, TARGET_COLS, ONSET_COLS
 from src.symptom_model import train_cb_model, predict as predict_symptoms, predict_proba
 from src.onset_model import train_onset_model, predict_onset
+from sklearn.metrics import mean_absolute_error, mean_squared_error
+import numpy as np
 
 def main():
     print("=" * 70)
@@ -43,6 +45,13 @@ def main():
     y_pred_cls = predict_symptoms(clf_model, X_test)
     y_pred_proba = predict_proba(clf_model, X_test)
     y_pred_reg = predict_onset(reg_model, X_test)
+    
+    print("\n[Evaluation] Calculating Metrics for Onset Regression...")
+    mae = mean_absolute_error(y_reg_test, y_pred_reg)
+    rmse = np.sqrt(mean_squared_error(y_reg_test, y_pred_reg))
+    
+    print(f"  Mean Absolute Error (MAE): {mae:.2f} hours")
+    print(f"  Root Mean Squared Error (RMSE): {rmse:.2f} hours")
     
     print("\n" + "=" * 70)
     print("COMBINED PREDICTION DISPLAY (With Probabilities)")
