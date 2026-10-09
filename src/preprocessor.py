@@ -23,6 +23,17 @@ TARGET_COLS: List[str] = [
     "others",
 ]
 
+ONSET_COLS: List[str] = [
+    "fever_onset",
+    "swelling_onset",
+    "redness_onset",
+    "pain_onset",
+    "rash_onset",
+    "vomiting_onset",
+    "others_onset",
+]
+
+
 CATEGORICAL_COLS: List[str] = [
     "sex",
     "vaccine_type",
@@ -115,4 +126,46 @@ def split_data(
         test_size=test_size,
         random_state=random_state,
     )
+
+
+def prepare_regression_data(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Preprocess the adverse reaction dataset for onset time regression.
+    
+    Converts string onset times like '10 hours' to float 10.0.
+    Fills NaN onset times with 0.0.
+    """
+    missing_features = [col for col in FEATURE_COLS if col not in df.columns]
+    missing_targets = [col for col in ONSET_COLS if col not in df.columns]
+
+    if missing_features or missing_targets:
+        raise ValueError(
+            f"Missing required columns in input DataFrame. "
+            f"Features missing: {missing_features}; Targets missing: {missing_targets}"
+        )
+
+    data = df.copy()
+
+    # Handle missing values for numerical features
+    for col in NUMERIC_COLS:
+        if data[col].isnull().any():
+            median_val = data[col].median()
+            data[col] = data[col].fillna(median_val)
+
+    # Handle categorical features and format as string
+    for col in CATEGORICAL_COLS:
+        data[col] = data[col].fillna("Missing").astype(str)
+
+    # Clean and convert onset columns to float
+    for col in ONSET_COLS:
+        # Convert "10 hours" to 10.0, replace None/NaN with 0.0
+        data[col] = data[col].astype(str).str.replace(' hours', '', regex=False)
+        data[col] = data[col].replace('None', '0').replace('nan', '0').astype(float)
+        data[col] = data[col].fillna(0.0)
+
+    X = data[FEATURE_COLS].copy()
+    y = data[ONSET_COLS].copy()
+
+    return X, y
+
 

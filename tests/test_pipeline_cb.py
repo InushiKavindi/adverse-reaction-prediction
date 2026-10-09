@@ -122,7 +122,7 @@ def run_pipeline() -> None:
         'vaccine_type': 'BCG', 
         'previous_reaction': 'No', 
         'allergy': 'No', 
-        'current_illness': 'Yes'
+        'current_illness': 'No'
     }
     
     # Convert to DataFrame
