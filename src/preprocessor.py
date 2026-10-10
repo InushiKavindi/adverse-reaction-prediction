@@ -105,7 +105,7 @@ def split_data(
     X: pd.DataFrame,
     y: pd.DataFrame,
     test_size: float = 0.2,
-    random_state: int = 42,
+    random_state: int = 2,
 ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
     Split feature matrix X and target DataFrame y into train and test sets.
@@ -114,7 +114,7 @@ def split_data(
         X (pd.DataFrame): Feature matrix.
         y (pd.DataFrame): Target variables DataFrame.
         test_size (float): Proportion of dataset to include in test split. Defaults to 0.2.
-        random_state (int): Random seed for reproducibility. Defaults to 42.
+        random_state (int): Random seed for reproducibility. Defaults to 2.
 
     Returns:
         Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
