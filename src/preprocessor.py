@@ -158,10 +158,10 @@ def prepare_regression_data(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFram
 
     # Clean and convert onset columns to float
     for col in ONSET_COLS:
-        # Convert "10 hours" to 10.0, replace None/NaN with 0.0
+        # Convert "10 hours" to 10.0, replace None/NaN with np.nan
         data[col] = data[col].astype(str).str.replace(' hours', '', regex=False)
-        data[col] = data[col].replace('None', '0').replace('nan', '0').astype(float)
-        data[col] = data[col].fillna(0.0)
+        data[col] = data[col].replace('None', 'nan').astype(float)
+        # We deliberately do not fillna(0.0) here to allow proper target filtering
 
     X = data[FEATURE_COLS].copy()
     y = data[ONSET_COLS].copy()
