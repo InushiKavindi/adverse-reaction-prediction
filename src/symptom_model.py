@@ -15,6 +15,7 @@ DEFAULT_CATEGORICAL_FEATURES: List[str] = [
     "previous_reaction",
     "allergy",
     "current_illness",
+    "medication",
 ]
 
 
@@ -199,17 +200,22 @@ def predict(
     y_pred = np.asarray(model.predict(X_test))
 
     # Logical Post-Processing
-    # TARGET_COLS = ["fever", "swelling", "pain", "irritability", "rash", "vomiting", "no_reaction", "others"]
-    # 'no_reaction' is at index 6.
-    if y_pred.shape[1] == 8:
+    # Ensure mutually exclusive rule for 'no_reaction':
+    # If any active symptom is present, no_reaction must be 0.
+    # If no active symptoms are present, no_reaction must be 1.
+    from src.preprocessor import TARGET_COLS
+    if "no_reaction" in TARGET_COLS and y_pred.shape[1] == len(TARGET_COLS):
+        no_reaction_idx = TARGET_COLS.index("no_reaction")
+    elif y_pred.shape[1] == 8:
         no_reaction_idx = 6
-        # Find if any active symptom (indices 0-5, 7) is predicted as 1
+    elif y_pred.shape[1] == 7:
+        no_reaction_idx = 5
+    else:
+        no_reaction_idx = None
+
+    if no_reaction_idx is not None:
         active_symptoms_mask = (np.delete(y_pred, no_reaction_idx, axis=1) == 1).any(axis=1)
-        
-        # Rule 1: If any active symptom is present, no_reaction must be 0
         y_pred[active_symptoms_mask, no_reaction_idx] = 0
-        
-        # Rule 2: If no active symptoms are present, no_reaction must be 1
         y_pred[~active_symptoms_mask, no_reaction_idx] = 1
 
     return y_pred

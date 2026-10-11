@@ -77,7 +77,7 @@ def run_pipeline() -> None:
     wrong_cases = comparison_df[~comparison_df["is_exact_match"]]
 
     print(f"Total Test Samples: {len(comparison_df)}")
-    print(f"Exact Matches (All 8 symptoms correct): {len(exact_matches)}")
+    print(f"Exact Matches (All {len(TARGET_COLS)} symptoms correct): {len(exact_matches)}")
     print(f"Misclassified Cases: {len(wrong_cases)}")
 
     print("\nSample Detailed Predictions vs Actual CSV Rows:")
@@ -120,10 +120,11 @@ def run_pipeline() -> None:
     custom_patient = {
         'age_months': 0, 
         'sex': 'F', 
-        'vaccine_type': 'BCG', 
+        'vaccine_type': 'BCG1', 
         'previous_reaction': 'No', 
         'allergy': 'No', 
-        'current_illness': 'Yes'
+        'current_illness': 'Yes',
+        'medication': 'No'
     }
     
     # Convert to DataFrame

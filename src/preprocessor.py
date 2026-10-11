@@ -10,6 +10,7 @@ FEATURE_COLS: List[str] = [
     "previous_reaction",
     "allergy",
     "current_illness",
+    "medication",
 ]
 
 TARGET_COLS: List[str] = [
@@ -18,7 +19,6 @@ TARGET_COLS: List[str] = [
     "redness",
     "pain",
     "rash",
-    "vomiting",
     "no_reaction",
     "others",
 ]
@@ -29,7 +29,6 @@ ONSET_COLS: List[str] = [
     "redness_onset",
     "pain_onset",
     "rash_onset",
-    "vomiting_onset",
     "others_onset",
 ]
 
@@ -40,6 +39,7 @@ CATEGORICAL_COLS: List[str] = [
     "previous_reaction",
     "allergy",
     "current_illness",
+    "medication",
 ]
 
 NUMERIC_COLS: List[str] = [
@@ -158,9 +158,9 @@ def prepare_regression_data(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFram
 
     # Clean and convert onset columns to float
     for col in ONSET_COLS:
-        # Convert "10 hours" to 10.0, replace None/NaN with np.nan
+        # Convert "10 hours" to 10.0, replace None/empty string with np.nan
         data[col] = data[col].astype(str).str.replace(' hours', '', regex=False)
-        data[col] = data[col].replace('None', 'nan').astype(float)
+        data[col] = pd.to_numeric(data[col], errors='coerce')
         # We deliberately do not fillna(0.0) here to allow proper target filtering
 
     X = data[FEATURE_COLS].copy()

@@ -93,7 +93,7 @@ def evaluate_models():
     print(results_df.to_string(index=False))
     
     print("\n--- Notes ---")
-    print("Some symptoms (e.g., redness, vomiting) may have very few valid records.")
+    print("Some symptoms (e.g., redness) may have very few valid records.")
     print("For these, cross-validation inside StackingRegressor uses fewer folds, and evaluation metrics may not be highly reliable.")
 
 if __name__ == '__main__':
