@@ -10,6 +10,7 @@ FEATURE_COLS: List[str] = [
     "previous_reaction",
     "allergy",
     "current_illness",
+    "medication",
 ]
 
 TARGET_COLS: List[str] = [
@@ -18,10 +19,19 @@ TARGET_COLS: List[str] = [
     "redness",
     "pain",
     "rash",
-    "vomiting",
     "no_reaction",
     "others",
 ]
+
+ONSET_COLS: List[str] = [
+    "fever_onset",
+    "swelling_onset",
+    "redness_onset",
+    "pain_onset",
+    "rash_onset",
+    "others_onset",
+]
+
 
 CATEGORICAL_COLS: List[str] = [
     "sex",
@@ -29,6 +39,7 @@ CATEGORICAL_COLS: List[str] = [
     "previous_reaction",
     "allergy",
     "current_illness",
+    "medication",
 ]
 
 NUMERIC_COLS: List[str] = [
@@ -94,7 +105,7 @@ def split_data(
     X: pd.DataFrame,
     y: pd.DataFrame,
     test_size: float = 0.2,
-    random_state: int = 42,
+    random_state: int = 2,
 ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
     Split feature matrix X and target DataFrame y into train and test sets.
@@ -103,7 +114,7 @@ def split_data(
         X (pd.DataFrame): Feature matrix.
         y (pd.DataFrame): Target variables DataFrame.
         test_size (float): Proportion of dataset to include in test split. Defaults to 0.2.
-        random_state (int): Random seed for reproducibility. Defaults to 42.
+        random_state (int): Random seed for reproducibility. Defaults to 2.
 
     Returns:
         Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
@@ -115,4 +126,46 @@ def split_data(
         test_size=test_size,
         random_state=random_state,
     )
+
+
+def prepare_regression_data(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Preprocess the adverse reaction dataset for onset time regression.
+    
+    Converts string onset times like '10 hours' to float 10.0.
+    Fills NaN onset times with 0.0.
+    """
+    missing_features = [col for col in FEATURE_COLS if col not in df.columns]
+    missing_targets = [col for col in ONSET_COLS if col not in df.columns]
+
+    if missing_features or missing_targets:
+        raise ValueError(
+            f"Missing required columns in input DataFrame. "
+            f"Features missing: {missing_features}; Targets missing: {missing_targets}"
+        )
+
+    data = df.copy()
+
+    # Handle missing values for numerical features
+    for col in NUMERIC_COLS:
+        if data[col].isnull().any():
+            median_val = data[col].median()
+            data[col] = data[col].fillna(median_val)
+
+    # Handle categorical features and format as string
+    for col in CATEGORICAL_COLS:
+        data[col] = data[col].fillna("Missing").astype(str)
+
+    # Clean and convert onset columns to float
+    for col in ONSET_COLS:
+        # Convert "10 hours" to 10.0, replace None/empty string with np.nan
+        data[col] = data[col].astype(str).str.replace(' hours', '', regex=False)
+        data[col] = pd.to_numeric(data[col], errors='coerce')
+        # We deliberately do not fillna(0.0) here to allow proper target filtering
+
+    X = data[FEATURE_COLS].copy()
+    y = data[ONSET_COLS].copy()
+
+    return X, y
+
 
