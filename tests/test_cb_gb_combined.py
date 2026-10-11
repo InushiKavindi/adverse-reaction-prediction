@@ -47,8 +47,9 @@ def main():
     y_pred_reg = predict_onset(reg_model, X_test)
     
     print("\n[Evaluation] Calculating Metrics for Onset Regression...")
-    mae = mean_absolute_error(y_reg_test, y_pred_reg)
-    rmse = np.sqrt(mean_squared_error(y_reg_test, y_pred_reg))
+    valid_mask = ~np.isnan(y_reg_test.values)
+    mae = mean_absolute_error(y_reg_test.values[valid_mask], y_pred_reg[valid_mask])
+    rmse = np.sqrt(mean_squared_error(y_reg_test.values[valid_mask], y_pred_reg[valid_mask]))
     
     print(f"  Mean Absolute Error (MAE): {mae:.2f} hours")
     print(f"  Root Mean Squared Error (RMSE): {rmse:.2f} hours")

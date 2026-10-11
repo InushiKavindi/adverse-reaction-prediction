@@ -48,8 +48,9 @@ def main():
     y_pred = predict_onset(model, X_test)
     
     # Calculate Overall Metrics
-    mae = mean_absolute_error(y_test, y_pred)
-    rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+    valid_mask = ~np.isnan(y_test.values)
+    mae = mean_absolute_error(y_test.values[valid_mask], y_pred[valid_mask])
+    rmse = np.sqrt(mean_squared_error(y_test.values[valid_mask], y_pred[valid_mask]))
     
     print("\n--- Model Performance (Error Metrics) ---")
     print(f"Mean Absolute Error (MAE): {mae:.2f} hours")

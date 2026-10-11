@@ -48,6 +48,8 @@ def evaluate_models():
     }
 
     results = []
+    overall_y_true = {name: [] for name in models_dict.keys()}
+    overall_y_pred = {name: [] for name in models_dict.keys()}
     
     for target in ONSET_COLS:
         valid_train_idx = y_train[target].notna()
@@ -75,6 +77,8 @@ def evaluate_models():
                 preds = np.maximum(preds, 0) # Ensure onset >= 0
                 mae = mean_absolute_error(y_test_valid, preds)
                 rmse = np.sqrt(mean_squared_error(y_test_valid, preds))
+                overall_y_true[name].extend(y_test_valid.values)
+                overall_y_pred[name].extend(preds)
             else:
                 mae = np.nan
                 rmse = np.nan
@@ -84,6 +88,21 @@ def evaluate_models():
             
         results.append(target_results)
 
+    # Calculate overall metrics across all valid symptom predictions
+    overall_row = {
+        'Symptom': 'Overall',
+        'Valid Train Records': sum(r['Valid Train Records'] for r in results),
+        'Valid Test Records': sum(r['Valid Test Records'] for r in results),
+    }
+    for name in models_dict.keys():
+        if len(overall_y_true[name]) > 0:
+            overall_row[f'{name} MAE'] = mean_absolute_error(overall_y_true[name], overall_y_pred[name])
+            overall_row[f'{name} RMSE'] = np.sqrt(mean_squared_error(overall_y_true[name], overall_y_pred[name]))
+        else:
+            overall_row[f'{name} MAE'] = np.nan
+            overall_row[f'{name} RMSE'] = np.nan
+    results.append(overall_row)
+
     results_df = pd.DataFrame(results)
     
     # Print the table nicely
@@ -92,9 +111,22 @@ def evaluate_models():
     print("\n--- Model Comparison Table ---")
     print(results_df.to_string(index=False))
     
+    print("\n" + "=" * 75)
+    print("OVERALL MODEL PERFORMANCE SUMMARY (Across All Symptoms)")
+    print("=" * 75)
+    for name in models_dict.keys():
+        o_mae = overall_row[f'{name} MAE']
+        o_rmse = overall_row[f'{name} RMSE']
+        if name == 'Hybrid':
+            print(f"  {name:18s} -> Overall MAE: {o_mae:.4f} hours | Overall RMSE: {o_rmse:.4f} hours  [Target: 1.0 - 2.0 MAE, 2.0 - 3.0 RMSE]")
+        else:
+            print(f"  {name:18s} -> Overall MAE: {o_mae:.4f} hours | Overall RMSE: {o_rmse:.4f} hours")
+    print("=" * 75)
+    
     print("\n--- Notes ---")
     print("Some symptoms (e.g., redness) may have very few valid records.")
     print("For these, cross-validation inside StackingRegressor uses fewer folds, and evaluation metrics may not be highly reliable.")
+
 
 if __name__ == '__main__':
     evaluate_models()

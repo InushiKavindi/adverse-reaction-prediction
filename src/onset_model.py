@@ -217,6 +217,7 @@ def train_hybrid_onset_model(
     return models
 
 
+
 def predict_onset(
     model: Union[Dict[str, Pipeline], Pipeline, Any],
     X_test: pd.DataFrame,
