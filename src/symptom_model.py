@@ -2,10 +2,14 @@ from typing import List, Optional, Union
 import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, StackingClassifier
 from sklearn.multioutput import ClassifierChain, MultiOutputClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import StratifiedKFold
+from sklearn.base import BaseEstimator, ClassifierMixin, clone
+from sklearn.dummy import DummyClassifier
 from catboost import CatBoostClassifier
 
 # Default categorical feature column names
@@ -181,6 +185,49 @@ def train_cb_model(
     model_pipeline.fit(X_train, y_train)
 
     return model_pipeline
+
+
+class SafeStackingClassifier(ClassifierMixin, BaseEstimator):
+    """
+    A wrapper around StackingClassifier to safely handle extremely imbalanced
+    targets where a class might have fewer instances than n_splits.
+    """
+    def __init__(self, estimators, final_estimator=None, cv=5, fallback_estimator=None):
+        self.estimators = estimators
+        self.final_estimator = final_estimator
+        self.cv = cv
+        self.fallback_estimator = fallback_estimator
+        
+    def fit(self, X, y):
+        classes, counts = np.unique(y, return_counts=True)
+        # If any class has fewer than 2 instances, cross-validation will fail.
+        if len(classes) < 2 or np.min(counts) < 2:
+            if self.fallback_estimator is not None:
+                self.model_ = clone(self.fallback_estimator)
+            else:
+                self.model_ = DummyClassifier(strategy="most_frequent")
+            self.model_.fit(X, y)
+        else:
+            # Safely scale down CV splits to avoid 0-instance folds during stratification
+            min_count = np.min(counts)
+            cv_splits = min(self.cv, min_count)
+            cv = StratifiedKFold(n_splits=cv_splits, shuffle=True, random_state=42)
+            
+            self.model_ = StackingClassifier(
+                estimators=self.estimators,
+                final_estimator=self.final_estimator,
+                cv=cv
+            )
+            self.model_.fit(X, y)
+            
+        self.classes_ = getattr(self.model_, "classes_", classes)
+        return self
+
+    def predict(self, X):
+        return self.model_.predict(X)
+
+    def predict_proba(self, X):
+        return self.model_.predict_proba(X)
 
 
 def predict(
