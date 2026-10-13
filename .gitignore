@@ -65,6 +65,7 @@ coverage.xml
 *.log
 *.sqlite
 *.sqlite3
+*.db
 
 # Environment variables & secrets
 .env
@@ -90,3 +91,7 @@ data/
 src/generate_data.py
 src/generate_combined_data.py
 generate_realistic_data.py
+
+# Backend documentation and tests
+backend/README.md
+backend/tests/
