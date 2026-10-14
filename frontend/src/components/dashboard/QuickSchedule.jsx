@@ -3,7 +3,7 @@ import { useChild } from "../../context/ChildContext";
 import { api } from "../../services/api";
 import { Calendar, Clock, AlertCircle, CheckCircle, ArrowUpRight } from "lucide-react";
 
-export default function QuickSchedule({ onSelectVaccineForScreening, onViewFullSchedule }) {
+export default function QuickSchedule({ onViewFullSchedule }) {
   const { activeChild, schedule = [] } = useChild();
 
   const completedCount = schedule.filter((s) => s.status === "completed").length;
@@ -78,10 +78,10 @@ export default function QuickSchedule({ onSelectVaccineForScreening, onViewFullS
               </p>
 
               <button
-                onClick={() => onSelectVaccineForScreening(vax.vaccineName)}
-                className="w-full py-1.5 px-3 bg-white hover:bg-sky-50 border border-sky-200 text-sky-700 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 shadow-2xs"
+                onClick={onViewFullSchedule}
+                className="w-full py-1.5 px-3 bg-white hover:bg-sky-50 border border-sky-200 text-sky-700 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
               >
-                <span>Check Reaction Risk</span>
+                <span>View in Schedule</span>
                 <ArrowUpRight className="w-3 h-3" />
               </button>
             </div>

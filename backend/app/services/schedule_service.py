@@ -221,7 +221,8 @@ def generate_vaccine_schedule(birth_date_str: str, vaccine_records: Optional[Dic
                 severityLevel=vax["severityLevel"],
                 batchNumber=vax["batchNumber"],
                 dosage=vax.get("dosage"),
-                isClickable=is_clickable
+                isClickable=is_clickable,
+                reaction=rec.get("reaction")
             )
         )
 

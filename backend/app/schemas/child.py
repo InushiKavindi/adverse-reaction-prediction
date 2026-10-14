@@ -68,7 +68,10 @@ class VaccineScheduleItem(BaseModel):
     batchNumber: str
     dosage: Optional[str] = None
     isClickable: bool = False
+    reaction: Optional[Dict[str, Any]] = None
 
 class VaccineStatusUpdate(BaseModel):
     status: str = Field(..., example="completed")  # "completed" | "due" | "upcoming"
     date_completed: Optional[str] = None
+    reaction: Optional[Dict[str, Any]] = None
+

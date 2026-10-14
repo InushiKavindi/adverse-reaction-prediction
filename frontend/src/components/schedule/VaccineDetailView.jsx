@@ -8,13 +8,14 @@ import {
   ShieldCheck,
   Activity,
   Syringe,
-  Layers,
   HeartPulse,
-  Tag,
-  ArrowRight
+  ArrowRight,
+  Check,
+  X,
+  User
 } from "lucide-react";
 import { useChild } from "../../context/ChildContext";
-import { Card, CardTitle, CardContent } from "../ui/card";
+import { Card, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 
@@ -40,9 +41,59 @@ function formatDisplayDate(dateStr) {
   return dateStr;
 }
 
+const SYMPTOM_OPTIONS = [
+  {
+    id: "no_reaction",
+    label: "No Reaction",
+    emoji: "😊",
+    isNoReaction: true
+  },
+  {
+    id: "fever",
+    label: "Fever",
+    emoji: "🌡️"
+  },
+  {
+    id: "swelling",
+    label: "Injection-site Swelling",
+    emoji: "💉"
+  },
+  {
+    id: "redness",
+    label: "Redness",
+    emoji: "🔴"
+  },
+  {
+    id: "pain",
+    label: "Pain",
+    emoji: "⚡"
+  },
+  {
+    id: "rash",
+    label: "Rash",
+    emoji: "🌸"
+  },
+  {
+    id: "others",
+    label: "Others",
+    emoji: "➕"
+  }
+];
+
 export default function VaccineDetailView({ vaccine: initialVaccine, onBack, onPredictVaccine, onSelectVaccine }) {
   const { activeChild, schedule = [], updateVaccineStatus } = useChild();
   const [updating, setUpdating] = useState(false);
+
+  // Popups State
+  const [showSymptomsConfirm, setShowSymptomsConfirm] = useState(false);
+  const [showReactionForm, setShowReactionForm] = useState(false);
+
+  // Reaction Recording Form State
+  const [currentIllness, setCurrentIllness] = useState("No");
+  const [currentMedication, setCurrentMedication] = useState("No");
+  const [selectedSymptoms, setSelectedSymptoms] = useState([]);
+  const [symptomOnsets, setSymptomOnsets] = useState({});
+  const [otherDescription, setOtherDescription] = useState("");
 
   // Read current live record from schedule
   const vaccine = schedule.find((s) => s.id === initialVaccine?.id) || initialVaccine;
@@ -66,13 +117,85 @@ export default function VaccineDetailView({ vaccine: initialVaccine, onBack, onP
 
   const isCompleted = vaccine.status === "completed";
   const isDue = vaccine.status === "due";
+  const recordedReaction = vaccine.reaction;
 
-  const handleToggleStatus = async () => {
+  const handleToggleClick = () => {
+    if (isCompleted) {
+      // Mark back as incomplete (due) directly
+      handleSaveStatus("due", null, null);
+    } else {
+      // Open Popup 1 (Image 3) to ask if child had symptoms
+      setShowSymptomsConfirm(true);
+    }
+  };
+
+  const handleSymptomsConfirmResponse = async (experiencedSymptoms) => {
+    setShowSymptomsConfirm(false);
+    if (experiencedSymptoms) {
+      // Open Popup 2 (Image 2) to record reactions
+      setShowReactionForm(true);
+    } else {
+      // Mark as completed with no reaction
+      const todayStr = new Date().toISOString().split("T")[0];
+      await handleSaveStatus("completed", todayStr, {
+        hasReaction: false,
+        symptoms: ["no_reaction"],
+        currentIllness: "No",
+        currentMedication: "No",
+        recordedAt: new Date().toISOString()
+      });
+    }
+  };
+
+  const handleSaveStatus = async (status, dateCompleted, reaction) => {
     setUpdating(true);
-    const nextStatus = isCompleted ? "due" : "completed";
-    const dateCompleted = nextStatus === "completed" ? new Date().toISOString().split("T")[0] : null;
-    await updateVaccineStatus(vaccine.id, nextStatus, dateCompleted);
+    await updateVaccineStatus(vaccine.id, status, dateCompleted, reaction);
     setUpdating(false);
+  };
+
+  const toggleSymptom = (id) => {
+    if (id === "no_reaction") {
+      if (selectedSymptoms.includes("no_reaction")) {
+        setSelectedSymptoms([]);
+      } else {
+        setSelectedSymptoms(["no_reaction"]);
+        setSymptomOnsets({});
+        setOtherDescription("");
+      }
+    } else {
+      setSelectedSymptoms((prev) => {
+        const withoutNoReaction = prev.filter((s) => s !== "no_reaction");
+        if (withoutNoReaction.includes(id)) {
+          const next = withoutNoReaction.filter((s) => s !== id);
+          const nextOnsets = { ...symptomOnsets };
+          delete nextOnsets[id];
+          setSymptomOnsets(nextOnsets);
+          return next;
+        } else {
+          return [...withoutNoReaction, id];
+        }
+      });
+    }
+  };
+
+  const handleOnsetChange = (id, val) => {
+    setSymptomOnsets((prev) => ({ ...prev, [id]: val }));
+  };
+
+  const handleReactionFormSubmit = async (e) => {
+    e.preventDefault();
+    const todayStr = new Date().toISOString().split("T")[0];
+    const reactionPayload = {
+      hasReaction: !selectedSymptoms.includes("no_reaction") && selectedSymptoms.length > 0,
+      currentIllness,
+      currentMedication,
+      symptoms: selectedSymptoms.length > 0 ? selectedSymptoms : ["no_reaction"],
+      onsets: symptomOnsets,
+      otherDescription: otherDescription || null,
+      recordedAt: new Date().toISOString()
+    };
+    setShowReactionForm(false);
+    await handleSaveStatus("completed", todayStr, reactionPayload);
   };
 
   return (
@@ -132,21 +255,13 @@ export default function VaccineDetailView({ vaccine: initialVaccine, onBack, onP
             </p>
           </div>
 
-          {/* Quick Actions using Shadcn Button */}
-          <div className="flex flex-row md:flex-col gap-2 shrink-0">
+          {/* Quick Action: Mark Completed / Incomplete */}
+          <div className="shrink-0">
             <Button
-              onClick={() => onPredictVaccine(vaccine.vaccineName)}
-              className="py-2.5 px-4 bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-2 cursor-pointer active:scale-95"
-            >
-              <Activity className="w-4 h-4" />
-              <span>Run AI Reaction Risk</span>
-            </Button>
-
-            <Button
-              onClick={handleToggleStatus}
+              onClick={handleToggleClick}
               disabled={updating}
               variant={isCompleted ? "outline" : "default"}
-              className={`py-2 px-4 text-xs font-bold rounded-xl transition cursor-pointer text-center ${
+              className={`py-2.5 px-5 text-xs font-bold rounded-xl transition cursor-pointer text-center shadow-xs ${
                 isCompleted
                   ? "border-slate-200 text-slate-600 hover:bg-slate-50"
                   : "bg-emerald-600 hover:bg-emerald-700 text-white"
@@ -185,8 +300,8 @@ export default function VaccineDetailView({ vaccine: initialVaccine, onBack, onP
           </div>
         )}
 
-        {/* 4-Column Clinical Specs Strip using Shadcn Card */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 pt-6">
+        {/* Clean 2-Column Clinical Specs Strip (Dosage & Batch Removed as requested) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 pt-6">
           <Card className="p-4 bg-slate-50/70 border-slate-100 rounded-2xl shadow-none">
             <div className="flex items-center gap-2 text-slate-400 text-xs font-bold mb-1">
               <Calendar className="w-3.5 h-3.5 text-sky-500" />
@@ -204,23 +319,30 @@ export default function VaccineDetailView({ vaccine: initialVaccine, onBack, onP
             </div>
             <p className="text-sm font-extrabold text-slate-800">{vaccine.route}</p>
           </Card>
-
-          <Card className="p-4 bg-slate-50/70 border-slate-100 rounded-2xl shadow-none">
-            <div className="flex items-center gap-2 text-slate-400 text-xs font-bold mb-1">
-              <Layers className="w-3.5 h-3.5 text-amber-500" />
-              <span>Dosage Volume</span>
-            </div>
-            <p className="text-sm font-extrabold text-slate-800">{vaccine.dosage || "Standard Pediatric Dose"}</p>
-          </Card>
-
-          <Card className="p-4 bg-slate-50/70 border-slate-100 rounded-2xl shadow-none">
-            <div className="flex items-center gap-2 text-slate-400 text-xs font-bold mb-1">
-              <Tag className="w-3.5 h-3.5 text-emerald-500" />
-              <span>Assigned Batch</span>
-            </div>
-            <p className="text-sm font-extrabold text-slate-800">{vaccine.batchNumber}</p>
-          </Card>
         </div>
+
+        {/* Recorded Reaction Banner if present */}
+        {recordedReaction && recordedReaction.hasReaction && (
+          <div className="mt-4 p-4 bg-pink-50/70 border border-pink-200/80 rounded-2xl">
+            <div className="flex items-center gap-2 text-[#ff2d78] text-xs font-bold mb-2">
+              <Activity className="w-4 h-4" />
+              <span>Recorded Post-Vaccination Reactions:</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {recordedReaction.symptoms?.map((s) => (
+                <span key={s} className="px-2.5 py-1 bg-white border border-pink-200 text-pink-700 rounded-xl text-xs font-semibold">
+                  {s.replace("_", " ")}
+                  {recordedReaction.onsets?.[s] ? ` (onset: ${recordedReaction.onsets[s]} hrs)` : ""}
+                </span>
+              ))}
+            </div>
+            {recordedReaction.otherDescription && (
+              <p className="text-xs text-slate-600 mt-2 font-medium">
+                Note: {recordedReaction.otherDescription}
+              </p>
+            )}
+          </div>
+        )}
       </Card>
 
       {/* Comprehensive Medical Guidance Details */}
@@ -277,6 +399,208 @@ export default function VaccineDetailView({ vaccine: initialVaccine, onBack, onP
           </div>
         </Card>
       </div>
+
+      {/* POPUP 1: Symptoms Confirmation Dialog (Matching Image 3) */}
+      {showSymptomsConfirm && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200">
+            <h3 className="text-base sm:text-lg font-bold text-slate-800 leading-snug mb-6">
+              Did the child experience any symptoms following the vaccination?
+            </h3>
+
+            <div className="flex items-center justify-center gap-4">
+              <button
+                type="button"
+                onClick={() => handleSymptomsConfirmResponse(true)}
+                className="w-28 py-2.5 rounded-full border border-pink-300 bg-pink-50/70 hover:bg-pink-100 text-pink-600 font-bold text-sm transition active:scale-95 cursor-pointer shadow-2xs"
+              >
+                Yes
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleSymptomsConfirmResponse(false)}
+                className="w-28 py-2.5 rounded-full border border-sky-300 bg-sky-50/70 hover:bg-sky-100 text-sky-600 font-bold text-sm transition active:scale-95 cursor-pointer shadow-2xs"
+              >
+                No
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* POPUP 2: Record a Reaction Form (Matching Image 2) */}
+      {showReactionForm && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="relative bg-white rounded-3xl max-w-md w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200 overflow-hidden my-auto">
+            {/* Modal Header */}
+            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowReactionForm(false)}
+                  className="p-1 rounded-full text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition cursor-pointer"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+                <h2 className="text-base font-bold text-slate-900">Record a Reaction</h2>
+              </div>
+
+              <div className="w-8 h-8 rounded-full bg-pink-100 text-pink-600 flex items-center justify-center font-bold text-xs">
+                <User className="w-4 h-4" />
+              </div>
+            </div>
+
+            {/* Scrollable Modal Body */}
+            <form onSubmit={handleReactionFormSubmit} className="p-5 overflow-y-auto space-y-4">
+              {/* Question Headline */}
+              <h3 className="text-base font-extrabold text-slate-900 leading-snug">
+                Did your child experience any of the following symptoms?
+              </h3>
+
+              {/* Clinical Context: Current Illness & Medication */}
+              <div className="bg-slate-50/80 border border-slate-200/70 rounded-2xl p-3.5 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-bold text-slate-800">Current Illness</p>
+                    <p className="text-[11px] text-slate-400">Child experiencing acute illness or fever?</p>
+                  </div>
+                  <div className="flex items-center bg-white border border-slate-200 rounded-full p-0.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setCurrentIllness("No")}
+                      className={`px-3 py-1 text-xs font-bold rounded-full transition cursor-pointer ${
+                        currentIllness === "No" ? "bg-slate-800 text-white shadow-xs" : "text-slate-500 hover:text-slate-800"
+                      }`}
+                    >
+                      No
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentIllness("Yes")}
+                      className={`px-3 py-1 text-xs font-bold rounded-full transition cursor-pointer ${
+                        currentIllness === "Yes" ? "bg-pink-500 text-white shadow-xs" : "text-slate-500 hover:text-slate-800"
+                      }`}
+                    >
+                      Yes
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-3 pt-2.5 border-t border-slate-200/60">
+                  <div>
+                    <p className="text-xs font-bold text-slate-800">Current Medication</p>
+                    <p className="text-[11px] text-slate-400">Taking antibiotics or steroid medications?</p>
+                  </div>
+                  <div className="flex items-center bg-white border border-slate-200 rounded-full p-0.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setCurrentMedication("No")}
+                      className={`px-3 py-1 text-xs font-bold rounded-full transition cursor-pointer ${
+                        currentMedication === "No" ? "bg-slate-800 text-white shadow-xs" : "text-slate-500 hover:text-slate-800"
+                      }`}
+                    >
+                      No
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentMedication("Yes")}
+                      className={`px-3 py-1 text-xs font-bold rounded-full transition cursor-pointer ${
+                        currentMedication === "Yes" ? "bg-pink-500 text-white shadow-xs" : "text-slate-500 hover:text-slate-800"
+                      }`}
+                    >
+                      Yes
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Symptoms List (Matching Image 2) */}
+              <div className="space-y-2.5">
+                {SYMPTOM_OPTIONS.map((sym) => {
+                  const isChecked = selectedSymptoms.includes(sym.id);
+
+                  return (
+                    <div
+                      key={sym.id}
+                      className={`rounded-2xl border transition-all p-3.5 sm:p-4 bg-white ${
+                        isChecked
+                          ? "border-pink-300 ring-2 ring-pink-100/70 shadow-xs"
+                          : "border-pink-100/90 hover:border-pink-200"
+                      }`}
+                    >
+                      <div
+                        onClick={() => toggleSymptom(sym.id)}
+                        className="flex items-center justify-between cursor-pointer select-none"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="text-lg shrink-0">{sym.emoji}</span>
+                          <span className="font-bold text-slate-800 text-sm">{sym.label}</span>
+                        </div>
+
+                        {/* Pink Checkbox */}
+                        <div
+                          className={`w-5 h-5 rounded-md border flex items-center justify-center transition ${
+                            isChecked
+                              ? "bg-[#ff2d78] border-[#ff2d78] text-white"
+                              : "border-pink-300 bg-white"
+                          }`}
+                        >
+                          {isChecked && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                        </div>
+                      </div>
+
+                      {/* Onset hours input when symptom is checked (except 'no_reaction') */}
+                      {isChecked && !sym.isNoReaction && (
+                        <div className="mt-3 pt-3 border-t border-pink-50 animate-in fade-in duration-200">
+                          <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                            How many hours after vaccination did the symptom begin?
+                          </label>
+                          <div className="relative">
+                            <Clock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                            <input
+                              type="number"
+                              min="0"
+                              max="720"
+                              step="0.5"
+                              value={symptomOnsets[sym.id] || ""}
+                              onChange={(e) => handleOnsetChange(sym.id, e.target.value)}
+                              placeholder="e.g. 5 hours"
+                              className="w-full pl-9 pr-4 py-2 text-sm bg-slate-50/80 border border-slate-200 rounded-xl focus:bg-white focus:border-sky-400 outline-none transition"
+                            />
+                          </div>
+
+                          {sym.id === "others" && (
+                            <div className="mt-2.5">
+                              <input
+                                type="text"
+                                value={otherDescription}
+                                onChange={(e) => setOtherDescription(e.target.value)}
+                                placeholder="Describe other symptom (e.g. irritability, crying)..."
+                                className="w-full px-3.5 py-2 text-xs bg-slate-50/80 border border-slate-200 rounded-xl focus:bg-white focus:border-sky-400 outline-none transition"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Submit Button (Image 2 style) */}
+              <div className="pt-2">
+                <Button
+                  type="submit"
+                  className="w-full py-3 bg-[#0284c7] hover:bg-sky-600 text-white font-bold text-sm rounded-full shadow-md shadow-sky-200 transition cursor-pointer active:scale-98"
+                >
+                  Continue
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

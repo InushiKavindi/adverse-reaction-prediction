@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone
 from pymongo.database import Database
 from pymongo import ASCENDING
@@ -96,13 +96,15 @@ class MongoChildRepository(IChildRepository):
         self.collection.update_one({"id": child.id}, {"$set": update_data})
         return child
 
-    def update_vaccine_status(self, child_id: int, vax_id: str, status: str, date_completed: Optional[str] = None) -> Optional[Child]:
+    def update_vaccine_status(self, child_id: int, vax_id: str, status: str, date_completed: Optional[str] = None, reaction: Optional[Dict[str, Any]] = None) -> Optional[Child]:
         key = f"vaccine_records.{vax_id}"
         update_doc = {
             f"{key}.status": status,
             f"{key}.dateCompleted": date_completed,
             "updated_at": datetime.now(timezone.utc)
         }
+        if reaction is not None:
+            update_doc[f"{key}.reaction"] = reaction
         self.collection.update_one({"id": child_id}, {"$set": update_doc})
         return self.get_by_id(child_id)
 

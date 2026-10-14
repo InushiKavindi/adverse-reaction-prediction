@@ -29,12 +29,6 @@ export default function Sidebar({ currentPage, setCurrentPage, mobileOpen, setMo
       icon: Calendar
     },
     {
-      id: "screening",
-      label: "Adverse Screening",
-      icon: Activity,
-      badge: "AI"
-    },
-    {
       id: "history",
       label: "Prediction History",
       icon: History

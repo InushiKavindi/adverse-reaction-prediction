@@ -174,11 +174,15 @@ def update_vaccine_status(
             child_id=child.id,
             vax_id=vax_id,
             status=update_in.status,
-            date_completed=date_completed
+            date_completed=date_completed,
+            reaction=update_in.reaction
         )
     else:
         records = dict(child.vaccine_records or {})
-        records[vax_id] = {"status": update_in.status, "dateCompleted": date_completed}
+        rec = {"status": update_in.status, "dateCompleted": date_completed}
+        if update_in.reaction is not None:
+            rec["reaction"] = update_in.reaction
+        records[vax_id] = rec
         child.vaccine_records = records
         updated_child = child_repo.update(child)
 

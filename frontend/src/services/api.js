@@ -221,14 +221,15 @@ export const api = {
     }
   },
 
-  async updateChildVaccineStatus(childId, vaxId, status, dateCompleted = null) {
+  async updateChildVaccineStatus(childId, vaxId, status, dateCompleted = null, reaction = null) {
     try {
       const response = await fetch(`${API_BASE_URL}/children/${childId}/schedule/${vaxId}`, {
         method: "PATCH",
         headers: getAuthHeaders(),
         body: JSON.stringify({
           status,
-          date_completed: dateCompleted
+          date_completed: dateCompleted,
+          reaction
         })
       });
       if (response.ok) {

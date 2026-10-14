@@ -16,26 +16,22 @@ import QuickSchedule from "./components/dashboard/QuickSchedule";
 // Other Pages
 import VaccineSchedule from "./components/schedule/VaccineSchedule";
 import VaccineDetailView from "./components/schedule/VaccineDetailView";
-import PredictionScreening from "./components/prediction/PredictionScreening";
 import PredictionHistory from "./components/history/PredictionHistory";
 import ProfileView from "./components/profile/ProfileView";
 
 function DashboardMain({
   currentPage,
   setCurrentPage,
-  screeningVaccine,
-  setScreeningVaccine,
   selectedVaccine,
   setSelectedVaccine,
   setMobileOpen
 }) {
-  const handleStartScreening = (vaccineName = "") => {
-    setScreeningVaccine(vaccineName);
-    setCurrentPage("screening");
-  };
-
   const handleViewSchedule = () => {
     setCurrentPage("schedule");
+  };
+
+  const handleViewHistory = () => {
+    setCurrentPage("history");
   };
 
   const handleSelectVaccineDetail = (vax) => {
@@ -51,19 +47,18 @@ function DashboardMain({
         {currentPage === "dashboard" && (
           <div className="space-y-6">
             <HeroBanner
-              onStartScreening={() => handleStartScreening("")}
               onViewSchedule={handleViewSchedule}
+              onViewHistory={handleViewHistory}
             />
 
             <StatPills />
 
             <ActionCards
-              onStartScreening={() => handleStartScreening("")}
+              onViewHistory={handleViewHistory}
               onViewSchedule={handleViewSchedule}
             />
 
             <QuickSchedule
-              onSelectVaccineForScreening={(vax) => handleStartScreening(vax)}
               onViewFullSchedule={handleViewSchedule}
             />
           </div>
@@ -72,7 +67,6 @@ function DashboardMain({
         {currentPage === "schedule" && (
           <VaccineSchedule
             onSelectVaccine={handleSelectVaccineDetail}
-            onPredictVaccine={(vax) => handleStartScreening(vax)}
           />
         )}
 
@@ -80,23 +74,12 @@ function DashboardMain({
           <VaccineDetailView
             vaccine={selectedVaccine}
             onBack={() => setCurrentPage("schedule")}
-            onPredictVaccine={(vax) => handleStartScreening(vax)}
             onSelectVaccine={handleSelectVaccineDetail}
           />
         )}
 
-
-        {currentPage === "screening" && (
-          <PredictionScreening
-            initialVaccine={screeningVaccine}
-            onPredictionSaved={() => {}}
-          />
-        )}
-
         {currentPage === "history" && (
-          <PredictionHistory
-            onNewScreening={() => handleStartScreening("")}
-          />
+          <PredictionHistory />
         )}
 
         {currentPage === "profile" && <ProfileView />}
@@ -108,7 +91,6 @@ function DashboardMain({
 function MainLayout() {
   const [currentPage, setCurrentPage] = useState("dashboard");
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [screeningVaccine, setScreeningVaccine] = useState("");
   const [selectedVaccine, setSelectedVaccine] = useState(null);
 
   const { isAddChildModalOpen, setIsAddChildModalOpen } = useChild();
@@ -128,8 +110,6 @@ function MainLayout() {
       <DashboardMain
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
-        screeningVaccine={screeningVaccine}
-        setScreeningVaccine={setScreeningVaccine}
         selectedVaccine={selectedVaccine}
         setSelectedVaccine={setSelectedVaccine}
         setMobileOpen={setMobileOpen}

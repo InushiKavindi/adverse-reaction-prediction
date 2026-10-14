@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
 from backend.app.models.child import Child
@@ -28,15 +28,18 @@ class SQLAlchemyChildRepository(IChildRepository):
         self.db.refresh(child)
         return child
 
-    def update_vaccine_status(self, child_id: int, vax_id: str, status: str, date_completed: Optional[str] = None) -> Optional[Child]:
+    def update_vaccine_status(self, child_id: int, vax_id: str, status: str, date_completed: Optional[str] = None, reaction: Optional[Dict[str, Any]] = None) -> Optional[Child]:
         child = self.get_by_id(child_id)
         if not child:
             return None
         records = dict(child.vaccine_records or {})
-        records[vax_id] = {
+        rec = {
             "status": status,
             "dateCompleted": date_completed
         }
+        if reaction is not None:
+            rec["reaction"] = reaction
+        records[vax_id] = rec
         child.vaccine_records = records
         child.updated_at = datetime.now(timezone.utc)
         self.db.commit()

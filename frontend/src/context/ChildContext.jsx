@@ -116,14 +116,15 @@ export function ChildProvider({ children }) {
   };
 
   // 5. Update vaccination milestone status in backend
-  const updateVaccineStatus = async (vaxId, newStatus, dateCompleted = null) => {
+  const updateVaccineStatus = async (vaxId, newStatus, dateCompleted = null, reaction = null) => {
     if (!activeChild?.id) return;
     try {
       const updatedSchedule = await api.updateChildVaccineStatus(
         activeChild.id,
         vaxId,
         newStatus,
-        dateCompleted
+        dateCompleted,
+        reaction
       );
       if (updatedSchedule && Array.isArray(updatedSchedule)) {
         setSchedule(updatedSchedule);

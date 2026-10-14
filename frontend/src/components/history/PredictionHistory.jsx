@@ -72,13 +72,15 @@ export default function PredictionHistory({ onNewScreening }) {
           </p>
         </div>
 
-        <button
-          onClick={onNewScreening}
-          className="py-2.5 px-4 bg-[#0284c7] hover:bg-sky-600 text-white font-bold text-xs rounded-full shadow-md shadow-sky-200 transition flex items-center gap-2 self-start sm:self-auto cursor-pointer"
-        >
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>New AI Screening</span>
-        </button>
+        {onNewScreening && (
+          <button
+            onClick={onNewScreening}
+            className="py-2.5 px-4 bg-[#0284c7] hover:bg-sky-600 text-white font-bold text-xs rounded-full shadow-md shadow-sky-200 transition flex items-center gap-2 self-start sm:self-auto cursor-pointer"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>New AI Screening</span>
+          </button>
+        )}
       </div>
 
       {/* Filter and Search Bar */}
@@ -119,12 +121,14 @@ export default function PredictionHistory({ onNewScreening }) {
           <p className="text-xs text-slate-500 max-w-sm mx-auto mb-4">
             No past predictions match your search criteria. Start a new screening to generate a prediction report.
           </p>
-          <button
-            onClick={onNewScreening}
-            className="py-2 px-4 bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs rounded-xl shadow-xs transition"
-          >
-            Start Screening Now
-          </button>
+          {onNewScreening && (
+            <button
+              onClick={onNewScreening}
+              className="py-2 px-4 bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs rounded-xl shadow-xs transition cursor-pointer"
+            >
+              Start Screening Now
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -3,7 +3,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useChild } from "../../context/ChildContext";
 import { Sparkles, Calendar, Activity, ArrowRight } from "lucide-react";
 
-export default function HeroBanner({ onStartScreening, onViewSchedule }) {
+export default function HeroBanner({ onViewSchedule, onViewHistory }) {
   const { user } = useAuth();
   const { activeChild } = useChild();
 
@@ -20,7 +20,7 @@ export default function HeroBanner({ onStartScreening, onViewSchedule }) {
         {/* AI Pill Badge */}
         <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/90 border border-pink-200 text-pink-600 rounded-full text-xs font-bold mb-4 shadow-xs">
           <Sparkles className="w-3.5 h-3.5 text-pink-500" />
-          <span>AI Adverse Vaccine Reaction Defense</span>
+          <span>Pediatric Immunization & Safety Portal</span>
         </div>
 
         {/* Big Greeting */}
@@ -30,26 +30,28 @@ export default function HeroBanner({ onStartScreening, onViewSchedule }) {
 
         {/* Subtitle with highlighted child name */}
         <p className="text-sm sm:text-base text-slate-600 leading-relaxed mb-6 font-normal">
-          Monitor immunization safety, detect potential adverse reactions early with machine learning, and track{" "}
-          <span className="font-bold text-pink-600">{childName}'s</span> pediatric wellness journey.
+          Monitor immunization milestones, track post-vaccination wellness, and manage{" "}
+          <span className="font-bold text-pink-600">{childName}'s</span> pediatric health journey.
         </p>
 
         {/* CTA Action Buttons */}
         <div className="flex flex-wrap items-center gap-3">
           <button
-            onClick={onStartScreening}
+            onClick={onViewSchedule}
             className="px-5 py-2.5 bg-[#0284c7] hover:bg-sky-600 text-white font-bold text-sm rounded-full shadow-md shadow-sky-200 hover:shadow-lg hover:shadow-sky-300 transition-all flex items-center gap-2 cursor-pointer active:scale-95"
           >
-            <Activity className="w-4 h-4" />
-            <span>Start AI Screening</span>
-          </button>
-
-          <button
-            onClick={onViewSchedule}
-            className="px-5 py-2.5 bg-white hover:bg-pink-50 border border-pink-300 text-pink-600 font-bold text-sm rounded-full shadow-xs hover:border-pink-400 transition-all flex items-center gap-2 cursor-pointer active:scale-95"
-          >
+            <Calendar className="w-4 h-4" />
             <span>Assess Vaccine Schedule</span>
           </button>
+
+          {onViewHistory && (
+            <button
+              onClick={onViewHistory}
+              className="px-5 py-2.5 bg-white hover:bg-pink-50 border border-pink-300 text-pink-600 font-bold text-sm rounded-full shadow-xs hover:border-pink-400 transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+            >
+              <span>Prediction History</span>
+            </button>
+          )}
         </div>
       </div>
     </div>
