@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import Optional, List
+from typing import Optional, List, Any
 from backend.app.models.user import User
 from backend.app.models.prediction import PredictionRecord
+from backend.app.models.child import Child
 
 class IUserRepository(ABC):
     """Interface for User persistence operations."""
@@ -57,3 +58,28 @@ class IPredictionRepository(ABC):
     @abstractmethod
     def delete(self, record: PredictionRecord) -> None:
         pass
+
+
+class IChildRepository(ABC):
+    """Interface for Child persistence operations."""
+
+    @abstractmethod
+    def get_by_id(self, child_id: int) -> Optional[Any]:
+        pass
+
+    @abstractmethod
+    def list_by_user(self, user_id: int) -> List[Any]:
+        pass
+
+    @abstractmethod
+    def create(self, child: Any) -> Any:
+        pass
+
+    @abstractmethod
+    def update(self, child: Any) -> Any:
+        pass
+
+    @abstractmethod
+    def delete(self, child: Any) -> None:
+        pass
+

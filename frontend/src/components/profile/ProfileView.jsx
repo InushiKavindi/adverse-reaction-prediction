@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useChild } from "../../context/ChildContext";
+import AddChildModal from "./AddChildModal";
 import {
   User,
   Baby,
@@ -20,36 +21,15 @@ export default function ProfileView() {
   const { user, logout, openLogin } = useAuth();
   const { childrenList, activeChild, setActiveChildId, addChild } = useChild();
 
-  const [isAddingChild, setIsAddingChild] = useState(false);
-  const [newChildData, setNewChildData] = useState({
-    name: "",
-    birthDate: "",
-    ageMonths: "",
-    sex: "M",
-    bloodGroup: "O+",
-    allergies: "None reported",
-    pediatrician: "Dr. K. Perera"
-  });
-
-  const handleAddChildSubmit = (e) => {
-    e.preventDefault();
-    if (!newChildData.name || !newChildData.ageMonths) return;
-
-    addChild({
-      ...newChildData,
-      ageMonths: parseFloat(newChildData.ageMonths)
-    });
-    setIsAddingChild(false);
-    setNewChildData({
-      name: "",
-      birthDate: "",
-      ageMonths: "",
-      sex: "M",
-      bloodGroup: "O+",
-      allergies: "None reported",
-      pediatrician: "Dr. K. Perera"
-    });
+  const { isAddChildModalOpen, setIsAddChildModalOpen } = useChild();
+  const [isAddingLocal, setIsAddingLocal] = useState(false);
+  const isAddingChild = isAddingLocal || isAddChildModalOpen;
+  const setIsAddingChild = (val) => {
+    setIsAddingLocal(val);
+    if (setIsAddChildModalOpen) setIsAddChildModalOpen(val);
   };
+
+
 
   return (
     <div className="space-y-6">
@@ -211,101 +191,11 @@ export default function ProfileView() {
       </div>
 
       {/* Add Child Modal */}
-      {isAddingChild && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
-              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <Baby className="w-5 h-5 text-sky-600" /> Add New Child Profile
-              </h3>
-              <button
-                onClick={() => setIsAddingChild(false)}
-                className="p-1 rounded-full text-slate-400 hover:text-slate-600"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      <AddChildModal
+        isOpen={isAddingChild}
+        onClose={() => setIsAddingChild(false)}
+      />
 
-            <form onSubmit={handleAddChildSubmit} className="space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Child's Full Name
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Leo Ben"
-                  value={newChildData.name}
-                  onChange={(e) => setNewChildData({ ...newChildData, name: e.target.value })}
-                  className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-sky-400 outline-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Age in Months
-                  </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    required
-                    placeholder="18"
-                    value={newChildData.ageMonths}
-                    onChange={(e) =>
-                      setNewChildData({ ...newChildData, ageMonths: e.target.value })
-                    }
-                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-sky-400 outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Sex</label>
-                  <select
-                    value={newChildData.sex}
-                    onChange={(e) => setNewChildData({ ...newChildData, sex: e.target.value })}
-                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-sky-400 outline-none"
-                  >
-                    <option value="M">Male (M)</option>
-                    <option value="F">Female (F)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Known Allergies / Sensitivities
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. None or egg protein sensitivity"
-                  value={newChildData.allergies}
-                  onChange={(e) =>
-                    setNewChildData({ ...newChildData, allergies: e.target.value })
-                  }
-                  className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-sky-400 outline-none"
-                />
-              </div>
-
-              <div className="pt-3 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsAddingChild(false)}
-                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 text-xs font-bold text-white bg-sky-500 hover:bg-sky-600 rounded-xl shadow-xs transition"
-                >
-                  Save Child Profile
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

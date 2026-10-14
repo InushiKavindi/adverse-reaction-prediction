@@ -62,7 +62,7 @@ export default function Sidebar({ currentPage, setCurrentPage, mobileOpen, setMo
       )}
 
       <aside
-        className={`fixed md:sticky top-0 left-0 z-40 h-screen w-72 bg-white border-r border-slate-100 flex flex-col justify-between p-5 transition-transform duration-300 md:translate-x-0 ${
+        className={`fixed md:relative top-0 left-0 z-40 h-screen h-[100dvh] w-72 shrink-0 bg-white border-r border-slate-100 flex flex-col justify-between p-5 transition-transform duration-300 md:translate-x-0 overflow-y-auto ${
           mobileOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full md:translate-x-0"
         }`}
       >

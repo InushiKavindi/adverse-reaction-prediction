@@ -10,12 +10,14 @@ from backend.app.models.user import User
 
 # Interfaces & Core
 from backend.app.interfaces.security import IPasswordHasher, ITokenService
-from backend.app.interfaces.repositories import IUserRepository, IPredictionRepository
+from backend.app.interfaces.repositories import IUserRepository, IPredictionRepository, IChildRepository
 from backend.app.core.security import BcryptPasswordHasher, JwtTokenService
 from backend.app.repositories.user_repository import SQLAlchemyUserRepository
 from backend.app.repositories.prediction_repository import SQLAlchemyPredictionRepository
+from backend.app.repositories.child_repository import SQLAlchemyChildRepository
 from backend.app.repositories.mongo_user_repository import MongoUserRepository
 from backend.app.repositories.mongo_prediction_repository import MongoPredictionRepository
+from backend.app.repositories.mongo_child_repository import MongoChildRepository
 
 # Domain Services
 from backend.app.services.user_service import UserService
@@ -56,6 +58,15 @@ def get_prediction_repository(db: Optional[Session] = Depends(get_db)) -> IPredi
         from backend.app.database import SessionLocal
         db = SessionLocal()
     return SQLAlchemyPredictionRepository(db)
+
+def get_child_repository(db: Optional[Session] = Depends(get_db)) -> IChildRepository:
+    if settings.DB_TYPE == "mongodb":
+        return MongoChildRepository(get_mongo_db())
+    if db is None:
+        from backend.app.database import SessionLocal
+        db = SessionLocal()
+    return SQLAlchemyChildRepository(db)
+
 
 def get_user_service(
     repo: IUserRepository = Depends(get_user_repository),

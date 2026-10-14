@@ -7,7 +7,7 @@ from backend.app.config import settings
 from backend.app.database import init_db
 from backend.app.mongodb import init_mongo_db, close_mongo_client
 from backend.app.services.ml_service import ml_service
-from backend.app.routes import auth_router, users_router, predict_router, meta_router
+from backend.app.routes import auth_router, users_router, predict_router, meta_router, children_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -49,6 +49,8 @@ app.include_router(meta_router, prefix=settings.API_V1_PREFIX)
 app.include_router(auth_router, prefix=settings.API_V1_PREFIX)
 app.include_router(users_router, prefix=settings.API_V1_PREFIX)
 app.include_router(predict_router, prefix=settings.API_V1_PREFIX)
+app.include_router(children_router, prefix=settings.API_V1_PREFIX)
+
 
 @app.get("/", include_in_schema=False)
 def root():

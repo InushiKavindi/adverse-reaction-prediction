@@ -15,23 +15,37 @@ import {
 } from "lucide-react";
 
 export default function PredictionHistory({ onNewScreening }) {
-  const [history, setHistory] = useState(() => api.getLocalPredictions());
+  const [history, setHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterRisk, setFilterRisk] = useState("all"); // 'all' | 'Low' | 'Medium' | 'High'
   const [selectedRecord, setSelectedRecord] = useState(null);
 
-  const refreshHistory = () => {
-    setHistory(api.getLocalPredictions());
+  const refreshHistory = async () => {
+    setLoading(true);
+    try {
+      const records = await api.getPredictionHistory();
+      setHistory(records || []);
+    } catch {
+      setHistory([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDelete = (id, e) => {
+  useEffect(() => {
+    refreshHistory();
+  }, []);
+
+  const handleDelete = async (id, e) => {
     e.stopPropagation();
     if (confirm("Are you sure you want to delete this prediction record?")) {
-      api.deletePrediction(id);
+      await api.deletePrediction(id);
       refreshHistory();
       if (selectedRecord?.id === id) setSelectedRecord(null);
     }
   };
+
 
   const filtered = history.filter((item) => {
     const matchesRisk = filterRisk === "all" || item.risk_level === filterRisk;

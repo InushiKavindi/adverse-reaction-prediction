@@ -36,6 +36,19 @@ export default function PredictionScreening({ initialVaccine = "", onPredictionS
     }
   }, [initialVaccine]);
 
+  useEffect(() => {
+    if (activeChild) {
+      setFormData((prev) => ({
+        ...prev,
+        patient_identifier: activeChild.name || prev.patient_identifier,
+        age_months: activeChild.ageMonths !== undefined ? activeChild.ageMonths : (activeChild.age_months !== undefined ? activeChild.age_months : prev.age_months),
+        sex: activeChild.sex || prev.sex,
+        allergy: activeChild.allergies && activeChild.allergies !== "None reported" ? "Yes" : "No"
+      }));
+    }
+  }, [activeChild]);
+
+
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
 

@@ -75,7 +75,94 @@ def get_next_sequence_value(db: Database, sequence_name: str) -> int:
     )
     return counter["seq"]
 
+def seed_initial_data(db: Database) -> None:
+    """
+    Seeds initial parent and child profiles if not already present.
+    Ensures seamless experience without relying on frontend mock data.
+    """
+    from datetime import datetime, timezone
+    from backend.app.core.security import BcryptPasswordHasher
+    hasher = BcryptPasswordHasher()
+    users = db["users"]
+    children = db["children"]
+
+    # Ensure parent_ben user exists
+    ben = users.find_one({"username": "parent_ben"})
+    if not ben:
+        ben_id = get_next_sequence_value(db, "users")
+        now = datetime.now(timezone.utc)
+        ben_doc = {
+            "id": ben_id,
+            "username": "parent_ben",
+            "email": "ben.parent@vaxcare.health",
+            "hashed_password": hasher.hash("DemoPass123!"),
+            "full_name": "Parent Ben",
+            "role": "parent",
+            "is_active": True,
+            "created_at": now,
+            "updated_at": now
+        }
+        users.insert_one(ben_doc)
+        ben = ben_doc
+
+    # Ensure child profile for parent_ben
+    if children.count_documents({"user_id": ben["id"]}) == 0:
+        c1_id = get_next_sequence_value(db, "children")
+        now = datetime.now(timezone.utc)
+        children.insert_one({
+            "id": c1_id,
+            "user_id": ben["id"],
+            "name": "Child Ben",
+            "birth_date": "2024-04-14",
+            "sex": "M",
+            "age_months": 18.0,
+            "allergies": "None reported",
+            "blood_group": "O+",
+            "pediatrician": "Dr. K. Perera (Lady Ridgeway Hospital)",
+            "emergency_contact": "+94 77 123 4567",
+            "vaccine_records": {
+                "vax-1": {"status": "completed", "dateCompleted": "2024-04-15"},
+                "vax-2": {"status": "completed", "dateCompleted": "2024-06-18"},
+                "vax-3": {"status": "completed", "dateCompleted": "2024-08-20"},
+                "vax-4": {"status": "completed", "dateCompleted": "2024-10-22"},
+                "vax-5": {"status": "completed", "dateCompleted": "2025-01-16"},
+                "vax-6": {"status": "completed", "dateCompleted": "2025-04-18"},
+                "vax-7": {"status": "due", "dateCompleted": None}
+            },
+            "created_at": now,
+            "updated_at": now
+        })
+
+    # Also check if sarah has children
+    sarah = users.find_one({"username": "sarah"})
+    if sarah and children.count_documents({"user_id": sarah["id"]}) == 0:
+        c2_id = get_next_sequence_value(db, "children")
+        now = datetime.now(timezone.utc)
+        children.insert_one({
+            "id": c2_id,
+            "user_id": sarah["id"],
+            "name": "Leo Connor",
+            "birth_date": "2024-04-14",
+            "sex": "M",
+            "age_months": 18.0,
+            "allergies": "None reported",
+            "blood_group": "A+",
+            "pediatrician": "Dr. K. Perera",
+            "emergency_contact": "+94 77 123 4567",
+            "vaccine_records": {
+                "vax-1": {"status": "completed", "dateCompleted": "2024-04-15"},
+                "vax-2": {"status": "completed", "dateCompleted": "2024-06-18"},
+                "vax-3": {"status": "completed", "dateCompleted": "2024-08-20"},
+                "vax-4": {"status": "completed", "dateCompleted": "2024-10-22"},
+                "vax-5": {"status": "completed", "dateCompleted": "2025-01-16"},
+                "vax-6": {"status": "completed", "dateCompleted": "2025-04-18"}
+            },
+            "created_at": now,
+            "updated_at": now
+        })
+
 def init_mongo_db() -> bool:
+
     """
     Initializes MongoDB collections, indexes, and verifies connectivity.
     Handles configuration errors gracefully with helpful messages.
@@ -119,10 +206,19 @@ def init_mongo_db() -> bool:
         predictions.create_index([("patient_identifier", ASCENDING)])
         predictions.create_index([("created_at", DESCENDING)])
 
+        # Configure children collection indexes
+        children = db["children"]
+        children.create_index([("id", ASCENDING)], unique=True)
+        children.create_index([("user_id", ASCENDING)])
+
+        # Seed initial data for parent_ben and demo usage
+        seed_initial_data(db)
+
         # Note: 'counters' collection uses default automatic unique index on '_id'
 
         print(f"[{settings.PROJECT_NAME}] MongoDB collections and indexes verified.")
         return True
+
 
     except OperationFailure as op_err:
         err_msg = str(op_err.details if hasattr(op_err, 'details') else op_err)

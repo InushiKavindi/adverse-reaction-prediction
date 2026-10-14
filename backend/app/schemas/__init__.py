@@ -15,6 +15,15 @@ from backend.app.schemas.prediction import (
     PredictionRecordResponse
 )
 
+from backend.app.schemas.child import (
+    ChildCreate,
+    ChildUpdate,
+    ChildResponse,
+    VaccineScheduleItem,
+    VaccineStatusUpdate,
+    calculate_age_in_months
+)
+
 __all__ = [
     "UserBase",
     "UserCreate",
@@ -26,5 +35,12 @@ __all__ = [
     "PatientInput",
     "SymptomPredictionItem",
     "PredictionResponse",
-    "PredictionRecordResponse"
+    "PredictionRecordResponse",
+    "ChildCreate",
+    "ChildUpdate",
+    "ChildResponse",
+    "VaccineScheduleItem",
+    "VaccineStatusUpdate",
+    "calculate_age_in_months"
 ]
+

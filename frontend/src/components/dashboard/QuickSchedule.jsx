@@ -4,13 +4,14 @@ import { api } from "../../services/api";
 import { Calendar, Clock, AlertCircle, CheckCircle, ArrowUpRight } from "lucide-react";
 
 export default function QuickSchedule({ onSelectVaccineForScreening, onViewFullSchedule }) {
-  const { activeChild } = useChild();
-  const schedule = api.getSchedule();
+  const { activeChild, schedule = [] } = useChild();
 
   const completedCount = schedule.filter((s) => s.status === "completed").length;
-  const progressPercent = Math.round((completedCount / schedule.length) * 100);
+  const totalCount = schedule.length || 1;
+  const progressPercent = Math.round((completedCount / totalCount) * 100);
 
   const dueVaccines = schedule.filter((s) => s.status === "due" || s.status === "upcoming").slice(0, 3);
+
 
   return (
     <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-xs">

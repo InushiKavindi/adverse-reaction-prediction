@@ -3,9 +3,15 @@ from backend.app.repositories.prediction_repository import SQLAlchemyPredictionR
 from backend.app.repositories.mongo_user_repository import MongoUserRepository
 from backend.app.repositories.mongo_prediction_repository import MongoPredictionRepository
 
+from backend.app.repositories.child_repository import SQLAlchemyChildRepository
+from backend.app.repositories.mongo_child_repository import MongoChildRepository
+
 __all__ = [
     "SQLAlchemyUserRepository",
     "SQLAlchemyPredictionRepository",
+    "SQLAlchemyChildRepository",
     "MongoUserRepository",
-    "MongoPredictionRepository"
+    "MongoPredictionRepository",
+    "MongoChildRepository"
 ]
+
