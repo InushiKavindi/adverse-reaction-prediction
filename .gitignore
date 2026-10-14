@@ -71,6 +71,7 @@ coverage.xml
 .env
 .env.local
 .env.*.local
+.env.example
 
 # IDE & Editor settings
 .idea/
@@ -93,5 +94,5 @@ src/generate_combined_data.py
 generate_realistic_data.py
 
 # Backend documentation and tests
-backend/README.md
+# backend/README.md
 backend/tests/

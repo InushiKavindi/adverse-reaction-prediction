@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from backend.app.config import settings
 from backend.app.database import get_db
+from backend.app.mongodb import get_mongo_db
 from backend.app.models.user import User
 
 # Interfaces & Core
@@ -13,6 +14,8 @@ from backend.app.interfaces.repositories import IUserRepository, IPredictionRepo
 from backend.app.core.security import BcryptPasswordHasher, JwtTokenService
 from backend.app.repositories.user_repository import SQLAlchemyUserRepository
 from backend.app.repositories.prediction_repository import SQLAlchemyPredictionRepository
+from backend.app.repositories.mongo_user_repository import MongoUserRepository
+from backend.app.repositories.mongo_prediction_repository import MongoPredictionRepository
 
 # Domain Services
 from backend.app.services.user_service import UserService
@@ -38,10 +41,20 @@ def get_password_hasher() -> IPasswordHasher:
 def get_token_service() -> ITokenService:
     return _token_service
 
-def get_user_repository(db: Session = Depends(get_db)) -> IUserRepository:
+def get_user_repository(db: Optional[Session] = Depends(get_db)) -> IUserRepository:
+    if settings.DB_TYPE == "mongodb":
+        return MongoUserRepository(get_mongo_db())
+    if db is None:
+        from backend.app.database import SessionLocal
+        db = SessionLocal()
     return SQLAlchemyUserRepository(db)
 
-def get_prediction_repository(db: Session = Depends(get_db)) -> IPredictionRepository:
+def get_prediction_repository(db: Optional[Session] = Depends(get_db)) -> IPredictionRepository:
+    if settings.DB_TYPE == "mongodb":
+        return MongoPredictionRepository(get_mongo_db())
+    if db is None:
+        from backend.app.database import SessionLocal
+        db = SessionLocal()
     return SQLAlchemyPredictionRepository(db)
 
 def get_user_service(

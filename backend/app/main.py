@@ -5,19 +5,27 @@ from contextlib import asynccontextmanager
 
 from backend.app.config import settings
 from backend.app.database import init_db
+from backend.app.mongodb import init_mongo_db, close_mongo_client
 from backend.app.services.ml_service import ml_service
 from backend.app.routes import auth_router, users_router, predict_router, meta_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: initialize database tables and pre-load ML models
-    print(f"[{settings.PROJECT_NAME}] Initializing database tables...")
-    init_db()
+    # Startup: initialize database tables / collections and pre-load ML models
+    if settings.DB_TYPE == "mongodb":
+        print(f"[{settings.PROJECT_NAME}] Initializing MongoDB connection & collections...")
+        init_mongo_db()
+    else:
+        print(f"[{settings.PROJECT_NAME}] Initializing SQLite database tables...")
+        init_db()
+
     print(f"[{settings.PROJECT_NAME}] Preloading machine learning models...")
     if not ml_service.is_ready():
         ml_service.load_models()
     yield
-    # Shutdown logic (if any)
+    # Shutdown logic
+    if settings.DB_TYPE == "mongodb":
+        close_mongo_client()
     print(f"[{settings.PROJECT_NAME}] Shutting down...")
 
 app = FastAPI(
