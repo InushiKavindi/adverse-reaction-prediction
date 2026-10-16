@@ -9,6 +9,7 @@ export const INITIAL_CHILDREN = [
     weightKg: 11.2,
     bloodGroup: "O+",
     allergies: "None reported",
+    currentIllness: "",
     currentMedication: "None",
     pediatrician: "Dr. K. Perera (Lady Ridgeway Hospital)",
     emergencyContact: "+94 77 123 4567"
@@ -22,6 +23,7 @@ export const INITIAL_CHILDREN = [
     weightKg: 7.4,
     bloodGroup: "A+",
     allergies: "Mild lactose sensitivity",
+    currentIllness: "",
     currentMedication: "None",
     pediatrician: "Dr. K. Perera",
     emergencyContact: "+94 77 123 4567"

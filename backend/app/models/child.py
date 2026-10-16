@@ -13,6 +13,8 @@ class Child(Base):
     sex = Column(String(10), nullable=False)         # M or F
     age_months = Column(Float, nullable=False, default=0.0)
     allergies = Column(String(255), default="None reported")
+    current_illness = Column(String(500), default="", nullable=True)
+    current_medication = Column(String(500), default="", nullable=True)
     blood_group = Column(String(10), default="O+")
     pediatrician = Column(String(100), default="Dr. K. Perera")
     emergency_contact = Column(String(50), nullable=True)

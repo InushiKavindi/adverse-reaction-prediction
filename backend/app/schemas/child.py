@@ -20,6 +20,8 @@ class ChildCreate(BaseModel):
     birth_date: str = Field(..., example="2024-04-14")
     sex: str = Field(..., example="M")
     allergies: Optional[str] = Field("None reported", example="None reported")
+    current_illness: Optional[str] = Field("", example="None")
+    current_medication: Optional[str] = Field("", example="None")
     age_months: Optional[float] = None
     blood_group: Optional[str] = "O+"
     pediatrician: Optional[str] = "Dr. K. Perera"
@@ -31,6 +33,8 @@ class ChildUpdate(BaseModel):
     sex: Optional[str] = None
     age_months: Optional[float] = None
     allergies: Optional[str] = None
+    current_illness: Optional[str] = None
+    current_medication: Optional[str] = None
     blood_group: Optional[str] = None
     pediatrician: Optional[str] = None
     emergency_contact: Optional[str] = None
@@ -43,6 +47,8 @@ class ChildResponse(BaseModel):
     sex: str
     age_months: float
     allergies: str
+    current_illness: Optional[str] = ""
+    current_medication: Optional[str] = ""
     blood_group: Optional[str] = "O+"
     pediatrician: Optional[str] = None
     emergency_contact: Optional[str] = None

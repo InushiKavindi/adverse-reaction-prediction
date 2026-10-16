@@ -49,6 +49,8 @@ def create_child(
         sex=child_in.sex,
         age_months=final_age,
         allergies=child_in.allergies or "None reported",
+        current_illness=child_in.current_illness if child_in.current_illness is not None else "",
+        current_medication=child_in.current_medication if child_in.current_medication is not None else "",
         blood_group=child_in.blood_group or "O+",
         pediatrician=child_in.pediatrician or "Dr. K. Perera",
         emergency_contact=child_in.emergency_contact,
@@ -107,6 +109,10 @@ def update_child(
         child.pediatrician = child_in.pediatrician
     if child_in.emergency_contact is not None:
         child.emergency_contact = child_in.emergency_contact
+    if child_in.current_illness is not None:
+        child.current_illness = child_in.current_illness
+    if child_in.current_medication is not None:
+        child.current_medication = child_in.current_medication
 
     return child_repo.update(child)
 

@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { useChild } from "../../context/ChildContext";
+import { Card } from "../ui/card";
+import { Button } from "../ui/button";
 import { Baby, X } from "lucide-react";
 
 export default function AddChildModal({ isOpen, onClose }) {
@@ -12,6 +14,8 @@ export default function AddChildModal({ isOpen, onClose }) {
     sex: "M",
     bloodGroup: "O+",
     allergies: "None reported",
+    currentIllness: "",
+    currentMedication: "",
     pediatrician: "Dr. K. Perera"
   });
   const [submitting, setSubmitting] = useState(false);
@@ -70,6 +74,8 @@ export default function AddChildModal({ isOpen, onClose }) {
           sex: "M",
           bloodGroup: "O+",
           allergies: "None reported",
+          currentIllness: "",
+          currentMedication: "",
           pediatrician: "Dr. K. Perera"
         });
         if (onClose) onClose();
@@ -83,8 +89,8 @@ export default function AddChildModal({ isOpen, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-slate-100">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+      <Card className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border-slate-100 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4 sticky top-0 bg-white z-10">
           <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
             <Baby className="w-5 h-5 text-sky-600" /> Add New Child Profile
           </h3>
@@ -175,25 +181,60 @@ export default function AddChildModal({ isOpen, onClose }) {
             />
           </div>
 
+          <div className="pt-1 border-t border-slate-100 space-y-3">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-slate-700">
+                  Current Illness <span className="text-slate-400 font-normal">(Optional)</span>
+                </label>
+                <span className="text-[10px] text-slate-400">Can be empty</span>
+              </div>
+              <input
+                type="text"
+                placeholder="e.g. Mild cold, slight cough, or leave empty if healthy"
+                value={formData.currentIllness}
+                onChange={(e) => setFormData({ ...formData, currentIllness: e.target.value })}
+                className="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-sky-400 outline-none transition"
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-slate-700">
+                  Current Medication <span className="text-slate-400 font-normal">(Optional)</span>
+                </label>
+                <span className="text-[10px] text-slate-400">Can be empty</span>
+              </div>
+              <input
+                type="text"
+                placeholder="e.g. Paracetamol 2.5ml, Antibiotic, or leave empty if none"
+                value={formData.currentMedication}
+                onChange={(e) => setFormData({ ...formData, currentMedication: e.target.value })}
+                className="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-sky-400 outline-none transition"
+              />
+            </div>
+          </div>
+
           <div className="pt-3 flex items-center justify-end gap-2">
-            <button
+            <Button
               type="button"
+              variant="ghost"
               onClick={onClose}
               disabled={submitting}
-              className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+              className="h-auto px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
               disabled={submitting}
-              className="px-5 py-2 text-xs font-bold text-white bg-sky-500 hover:bg-sky-600 rounded-xl shadow-xs transition cursor-pointer active:scale-95 disabled:opacity-50"
+              className="h-auto px-5 py-2 text-xs font-bold text-white bg-sky-500 hover:bg-sky-600 rounded-xl shadow-xs transition cursor-pointer active:scale-95 disabled:opacity-50"
             >
               {submitting ? "Saving..." : "Save Child Profile"}
-            </button>
+            </Button>
           </div>
         </form>
-      </div>
+      </Card>
     </div>
   );
 }

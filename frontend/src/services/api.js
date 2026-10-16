@@ -108,7 +108,9 @@ export const api = {
           ...c,
           ageMonths: c.age_months !== undefined ? c.age_months : c.ageMonths,
           birthDate: c.birth_date || c.birthDate,
-          bloodGroup: c.blood_group || c.bloodGroup || "O+"
+          bloodGroup: c.blood_group || c.bloodGroup || "O+",
+          currentIllness: c.current_illness !== undefined ? c.current_illness : (c.currentIllness || ""),
+          currentMedication: c.current_medication !== undefined ? c.current_medication : (c.currentMedication || "")
         }));
       }
       return [];
@@ -125,6 +127,8 @@ export const api = {
         sex: childData.sex || "M",
         age_months: childData.ageMonths !== undefined ? parseFloat(childData.ageMonths) : undefined,
         allergies: childData.allergies || "None reported",
+        current_illness: childData.currentIllness !== undefined ? childData.currentIllness : (childData.current_illness || ""),
+        current_medication: childData.currentMedication !== undefined ? childData.currentMedication : (childData.current_medication || ""),
         blood_group: childData.bloodGroup || "O+",
         pediatrician: childData.pediatrician || "Dr. K. Perera",
         emergency_contact: childData.emergencyContact || childData.emergency_contact
@@ -144,7 +148,9 @@ export const api = {
             ...c,
             ageMonths: c.age_months,
             birthDate: c.birth_date,
-            bloodGroup: c.blood_group
+            bloodGroup: c.blood_group,
+            currentIllness: c.current_illness || "",
+            currentMedication: c.current_medication || ""
           }
         };
       }
@@ -164,6 +170,8 @@ export const api = {
         sex: childData.sex,
         age_months: childData.ageMonths !== undefined ? parseFloat(childData.ageMonths) : undefined,
         allergies: childData.allergies,
+        current_illness: childData.currentIllness !== undefined ? childData.currentIllness : childData.current_illness,
+        current_medication: childData.currentMedication !== undefined ? childData.currentMedication : childData.current_medication,
         blood_group: childData.bloodGroup,
         pediatrician: childData.pediatrician,
         emergency_contact: childData.emergencyContact
@@ -183,7 +191,9 @@ export const api = {
             ...c,
             ageMonths: c.age_months,
             birthDate: c.birth_date,
-            bloodGroup: c.blood_group
+            bloodGroup: c.blood_group,
+            currentIllness: c.current_illness !== undefined ? c.current_illness : (c.currentIllness || ""),
+            currentMedication: c.current_medication !== undefined ? c.current_medication : (c.currentMedication || "")
           }
         };
       }
