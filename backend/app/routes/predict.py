@@ -21,6 +21,7 @@ router = APIRouter(prefix="/predict", tags=["Predictions"])
 @router.post("", response_model=PredictionResponse)
 def predict_reaction(
     patient: PatientInput,
+    save_record: bool = True,
     prediction_service: PredictionService = Depends(get_prediction_service),
     current_user: Optional[User] = Depends(get_optional_current_user)
 ):
@@ -28,10 +29,10 @@ def predict_reaction(
     Generate an adverse reaction prediction for a patient based on clinical features.
     
     If an authenticated user submits the request, the record is automatically saved
-    to their clinical prediction history.
+    to their clinical prediction history (unless save_record=False).
     """
     user_id = current_user.id if current_user else None
-    return prediction_service.predict_and_record(patient=patient, user_id=user_id)
+    return prediction_service.predict_and_record(patient=patient, user_id=user_id, save_record=save_record)
 
 @router.get("/history", response_model=List[PredictionRecordResponse])
 def get_prediction_history(

@@ -66,6 +66,7 @@ class IPredictionService(ABC):
     def predict_and_record(
         self, 
         patient: PatientInput, 
-        user_id: Optional[int] = None
+        user_id: Optional[int] = None,
+        save_record: bool = True
     ) -> PredictionResponse:
         pass

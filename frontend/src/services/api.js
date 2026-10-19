@@ -252,9 +252,10 @@ export const api = {
   },
 
   // --- PREDICTIONS & ONSET FORECASTS ---
-  async predict(patientInput) {
+  async predict(patientInput, saveRecord = false) {
     try {
-      const response = await fetch(`${API_BASE_URL}/predict`, {
+      const url = `${API_BASE_URL}/predict${saveRecord ? "?save_record=true" : "?save_record=false"}`;
+      const response = await fetch(url, {
         method: "POST",
         headers: getAuthHeaders(),
         body: JSON.stringify(patientInput)

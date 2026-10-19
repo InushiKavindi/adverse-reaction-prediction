@@ -100,6 +100,39 @@ class TrainedModelInferenceEngine(IInferenceEngine):
         return y_pred_onset
 
 
+def normalize_binary(val: Any) -> str:
+    s = str(val or "").strip().lower()
+    if s in ["", "no", "none", "none reported", "nil", "false", "0", "n/a", "no allergies", "negative"]:
+        return "No"
+    return "Yes"
+
+def normalize_vaccine_type(val: Any) -> str:
+    s = str(val or "").strip()
+    known = [
+        "BCG1", "BCG2", "Pentavalent1,OPV1", "Pentavalent2,OPV2,IPV",
+        "Pentavalent3,OPV3", "MMR1", "JE", "DPT,OPV4", "DT,OPV5", "MMR2"
+    ]
+    if s in known:
+        return s
+    low = s.lower()
+    if "bcg" in low:
+        return "BCG2" if "2" in low else "BCG1"
+    if "pentavalent" in low or "penta" in low:
+        if "3" in low:
+            return "Pentavalent3,OPV3"
+        if "2" in low:
+            return "Pentavalent2,OPV2,IPV"
+        return "Pentavalent1,OPV1"
+    if "mmr" in low:
+        return "MMR2" if "2" in low else "MMR1"
+    if "je" in low:
+        return "JE"
+    if "dpt" in low:
+        return "DPT,OPV4"
+    if "dt" in low:
+        return "DT,OPV5"
+    return s
+
 class PredictionService(IPredictionService):
     """
     High-level prediction service orchestrating inference, risk assessment, and persistence.
@@ -119,17 +152,25 @@ class PredictionService(IPredictionService):
     def predict_and_record(
         self, 
         patient: PatientInput, 
-        user_id: Optional[int] = None
+        user_id: Optional[int] = None,
+        save_record: bool = True
     ) -> PredictionResponse:
-        # 1. Format input DataFrame
+        # 1. Format input DataFrame with clinical normalization
+        vax_type = normalize_vaccine_type(patient.vaccine_type)
+        prev_rxn = normalize_binary(patient.previous_reaction)
+        allergy_val = normalize_binary(patient.allergy)
+        illness_val = normalize_binary(patient.current_illness)
+        med_val = normalize_binary(patient.medication)
+        sex_val = "M" if str(patient.sex).strip().upper().startswith("M") else "F"
+
         input_dict = {
             "age_months": float(patient.age_months),
-            "sex": str(patient.sex).strip(),
-            "vaccine_type": str(patient.vaccine_type).strip(),
-            "previous_reaction": str(patient.previous_reaction).strip(),
-            "allergy": str(patient.allergy).strip(),
-            "current_illness": str(patient.current_illness).strip(),
-            "medication": str(patient.medication).strip(),
+            "sex": sex_val,
+            "vaccine_type": vax_type,
+            "previous_reaction": prev_rxn,
+            "allergy": allergy_val,
+            "current_illness": illness_val,
+            "medication": med_val,
         }
         df_input = pd.DataFrame([input_dict])
 
@@ -176,7 +217,7 @@ class PredictionService(IPredictionService):
                     predicted=is_pred_positive,
                     probability=prob,
                     onset_hours=onset_val if col != "no_reaction" else None,
-                    onset_description=onset_desc if is_pred_positive and col != "no_reaction" else None
+                    onset_description=onset_desc if col != "no_reaction" else None
                 )
             )
 
@@ -187,10 +228,10 @@ class PredictionService(IPredictionService):
             risk_level, active_positive_symptoms, probabilities_dict, onset_dict
         )
 
-        # 5. Persist prediction if repository is provided
+        # 5. Persist prediction if repository is provided and save_record is True
         created_id = None
         created_at = None
-        if self.prediction_repo:
+        if self.prediction_repo and save_record:
             record = PredictionRecord(
                 user_id=user_id,
                 patient_identifier=patient.patient_identifier,

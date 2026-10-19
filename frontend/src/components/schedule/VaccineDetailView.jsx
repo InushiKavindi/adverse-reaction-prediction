@@ -1,75 +1,29 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   ArrowLeft,
-  Calendar,
   CheckCircle2,
   Clock,
   AlertCircle,
-  ShieldCheck,
   Activity,
-  Syringe,
-  HeartPulse,
   ArrowRight
 } from "lucide-react";
 import { useChild } from "../../context/ChildContext";
+import { api } from "../../services/api";
 import { Card, CardTitle, CardDescription } from "../ui/card";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "../ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
 import {
   ReactionIllnessModal,
   LogReactionsModal
 } from "./VaccineReactionModals";
-
-function formatDisplayDate(dateStr) {
-  if (!dateStr) return "";
-  try {
-    if (typeof dateStr === "string" && dateStr.includes("/")) {
-      const parts = dateStr.split("/");
-      if (parts.length === 3) {
-        const m = parts[0].padStart(2, "0");
-        const d = parts[1].padStart(2, "0");
-        const y = parts[2];
-        return `${m}/${d}/${y}`;
-      }
-    }
-    const parts = String(dateStr).split("-");
-    if (parts.length === 3) {
-      const year = parts[0];
-      const month = parts[1].padStart(2, "0");
-      const day = parts[2].padStart(2, "0");
-      return `${month}/${day}/${year}`;
-    }
-  } catch {
-    // fallback
-  }
-  return dateStr;
-}
-
-function hasScheduledDateArrived(dueDateStr) {
-  if (!dueDateStr) return true;
-  try {
-    let dueYear, dueMonth, dueDay;
-    if (String(dueDateStr).includes("-")) {
-      const parts = String(dueDateStr).split("-").map((p) => parseInt(p, 10));
-      dueYear = parts[0];
-      dueMonth = parts[1] - 1;
-      dueDay = parts[2];
-    } else if (String(dueDateStr).includes("/")) {
-      const parts = String(dueDateStr).split("/").map((p) => parseInt(p, 10));
-      dueMonth = parts[0] - 1;
-      dueDay = parts[1];
-      dueYear = parts[2];
-    } else {
-      return true;
-    }
-    const scheduledDayStart = new Date(dueYear, dueMonth, dueDay, 0, 0, 0);
-    const now = new Date();
-    return now >= scheduledDayStart;
-  } catch {
-    return true;
-  }
-}
+import {
+  mapVaccineToModelType,
+  formatDisplayDate,
+  hasScheduledDateArrived
+} from "./vaccineUtils";
+import VaccineOverviewTab from "./VaccineOverviewTab";
+import VaccineReactionsTab from "./VaccineReactionsTab";
 
 export default function VaccineDetailView({ vaccine: initialVaccine, onBack, onPredictVaccine, onSelectVaccine }) {
   const { activeChild, schedule = [], updateVaccineStatus, updateChild } = useChild();
@@ -88,6 +42,77 @@ export default function VaccineDetailView({ vaccine: initialVaccine, onBack, onP
 
   // Read current live record from schedule
   const vaccine = schedule.find((s) => s.id === initialVaccine?.id) || initialVaccine;
+  const currentIndex = schedule.findIndex((s) => s.id === vaccine?.id);
+  const isFirstVaccine = vaccine?.id === "vax-1" || currentIndex === 0 || vaccine?.vaccineName?.toLowerCase().includes("bcg");
+
+  // ML Model Prediction State for this milestone
+  const [modelPrediction, setModelPrediction] = useState(null);
+  const [loadingPrediction, setLoadingPrediction] = useState(false);
+  const [predictionError, setPredictionError] = useState(null);
+
+  const fetchModelPrediction = useCallback(async () => {
+    if (!vaccine) return;
+
+    // BCG is administered within 24 hours of birth. At birth, clinical history (allergies,
+    // current illness, medications) is not established, so individual probability forecasts and onsets do not apply.
+    const isBcg = vaccine.id === "vax-1" || currentIndex === 0 || vaccine.vaccineName?.toLowerCase().includes("bcg");
+    if (isBcg) {
+      setModelPrediction(null);
+      setLoadingPrediction(false);
+      setPredictionError(null);
+      return;
+    }
+
+    setLoadingPrediction(true);
+    setPredictionError(null);
+
+    // Check if any previous completed vaccine has an adverse reaction recorded
+    const hasPriorReaction = schedule.some(
+      (s) => s.status === "completed" && s.reaction?.hasReaction === true
+    );
+
+    const payload = {
+      patient_identifier: activeChild?.name || "Active Child",
+      age_months: vaccine.targetAgeMonths !== undefined ? Number(vaccine.targetAgeMonths) : Number(activeChild?.ageMonths || 0),
+      sex: activeChild?.sex || "M",
+      vaccine_type: mapVaccineToModelType(vaccine),
+      previous_reaction: hasPriorReaction ? "Yes" : "No",
+      allergy: activeChild?.allergies || "No",
+      current_illness: activeChild?.currentIllness || "No",
+      medication: activeChild?.currentMedication || "No",
+      notes: `Clinical evaluation for milestone ${vaccine.milestone || ""} (${vaccine.vaccineName || ""})`
+    };
+
+    try {
+      const res = await api.predict(payload, false);
+      if (res.success && res.data) {
+        setModelPrediction(res.data);
+      } else {
+        setPredictionError(res.error || "Unable to load prediction");
+      }
+    } catch (err) {
+      setPredictionError(err.message || "Failed to connect to model");
+    } finally {
+      setLoadingPrediction(false);
+    }
+  }, [
+    vaccine?.id,
+    vaccine?.vaccineName,
+    vaccine?.targetAgeMonths,
+    activeChild?.id,
+    activeChild?.name,
+    activeChild?.ageMonths,
+    activeChild?.sex,
+    activeChild?.allergies,
+    activeChild?.currentIllness,
+    activeChild?.currentMedication,
+    schedule,
+    currentIndex
+  ]);
+
+  useEffect(() => {
+    fetchModelPrediction();
+  }, [fetchModelPrediction]);
 
   if (!vaccine) {
     return (
@@ -103,15 +128,12 @@ export default function VaccineDetailView({ vaccine: initialVaccine, onBack, onP
     );
   }
 
-  const currentIndex = schedule.findIndex((s) => s.id === vaccine.id);
   const nextVaccine = (currentIndex >= 0 && currentIndex < schedule.length - 1) ? schedule[currentIndex + 1] : null;
 
   const isCompleted = vaccine.status === "completed";
   const isDue = vaccine.status === "due";
   const recordedReaction = vaccine.reaction;
   const scheduledDayArrived = hasScheduledDateArrived(vaccine.dueDate);
-
-  const isFirstVaccine = vaccine.id === "vax-1" || currentIndex === 0 || vaccine.vaccineName?.toLowerCase().includes("bcg");
 
   const handleToggleClick = async () => {
     if (isCompleted) {
@@ -262,7 +284,7 @@ export default function VaccineDetailView({ vaccine: initialVaccine, onBack, onP
         </span>
       </div>
 
-      {/* Main Milestone Header Card (Shadcn Card) */}
+      {/* Main Milestone Header Card */}
       <Card className="bg-white border-pink-100 rounded-3xl p-4 sm:p-6 shadow-xs">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-pink-50">
           <div className="space-y-1.5 min-w-0">
@@ -313,7 +335,7 @@ export default function VaccineDetailView({ vaccine: initialVaccine, onBack, onP
               </Button>
             )}
 
-            {onPredictVaccine && (
+            {onPredictVaccine && !isFirstVaccine && (
               <Button
                 type="button"
                 onClick={() => onPredictVaccine(vaccine.vaccineName)}
@@ -409,116 +431,24 @@ export default function VaccineDetailView({ vaccine: initialVaccine, onBack, onP
         </TabsList>
 
         {/* TAB 1: Clinical Overview AND Diseases & Coverage Combined Together */}
-        <TabsContent value="overview" className="space-y-3.5 pt-1">
-          {/* Clinical Administration Specs */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Card className="p-4 bg-white border-slate-100 rounded-2xl shadow-xs">
-              <div className="flex items-center gap-2 text-slate-400 text-xs font-bold mb-1">
-                <Calendar className="w-3.5 h-3.5 text-sky-500 shrink-0" />
-                <span>{isCompleted ? "Administered Date" : "Scheduled Date"}</span>
-              </div>
-              <p className="text-sm font-extrabold text-slate-800">
-                {formatDisplayDate(isCompleted ? (vaccine.dateCompleted || vaccine.dueDate) : vaccine.dueDate)}
-              </p>
-              <p className="text-[11px] text-slate-400 mt-0.5">Calculated from child's DOB</p>
-            </Card>
+        <VaccineOverviewTab
+          vaccine={vaccine}
+          isCompleted={isCompleted}
+          recordedReaction={recordedReaction}
+          handleOpenLogReactions={handleOpenLogReactions}
+        />
 
-            <Card className="p-4 bg-white border-slate-100 rounded-2xl shadow-xs">
-              <div className="flex items-center gap-2 text-slate-400 text-xs font-bold mb-1">
-                <Syringe className="w-3.5 h-3.5 text-pink-500 shrink-0" />
-                <span>Route & Administration Site</span>
-              </div>
-              <p className="text-sm font-extrabold text-slate-800">{vaccine.route}</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">{vaccine.fullRoute || "Pediatric immunization protocol"}</p>
-            </Card>
-          </div>
-
-          {/* Diseases Prevented & Coverage Strip */}
-          <Card className="bg-white border-slate-100 rounded-2xl p-4 sm:p-5 shadow-xs space-y-2.5">
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center font-bold shrink-0">
-                <ShieldCheck className="w-4 h-4" />
-              </div>
-              <div>
-                <CardTitle className="text-sm sm:text-base font-bold text-slate-900">Diseases Prevented & Coverage</CardTitle>
-                <CardDescription className="text-[11px] text-slate-400">Target infectious pathogens and pediatric immunization coverage</CardDescription>
-              </div>
-            </div>
-
-            <div className="p-3 bg-sky-50/70 border border-sky-100 rounded-xl">
-              <p className="text-xs sm:text-sm font-semibold text-slate-800 leading-relaxed">
-                {vaccine.diseases}
-              </p>
-            </div>
-
-            <p className="text-[11px] sm:text-xs text-slate-500 leading-normal">
-              Primary immunization establishes long-lasting antibodies and cell-mediated immunity against severe pediatric morbidities. Routine adherence strictly prevents breakout infection cycles.
-            </p>
-          </Card>
-
-          {/* Recorded Reaction Banner if present */}
-          {recordedReaction && recordedReaction.hasReaction && (
-            <Card className="p-4 bg-pink-50/70 border-pink-200/80 rounded-2xl shadow-none">
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <div className="flex items-center gap-2 text-[#ff2d78] text-xs font-bold">
-                  <Activity className="w-4 h-4 shrink-0" />
-                  <span>Recorded Post-Vaccination Reactions:</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleOpenLogReactions}
-                  className="text-xs font-bold text-[#ff2d78] hover:underline cursor-pointer"
-                >
-                  Edit Reactions
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {recordedReaction.symptoms?.map((s) => (
-                  <span key={s} className="px-2.5 py-1 bg-white border border-pink-200 text-pink-700 rounded-xl text-xs font-semibold">
-                    {s.replace("_", " ")}
-                    {recordedReaction.onsets?.[s] ? ` (${recordedReaction.onsets[s]} hrs)` : ""}
-                  </span>
-                ))}
-              </div>
-              {recordedReaction.otherDescription && (
-                <p className="text-xs text-slate-600 mt-2 font-medium">
-                  Note: {recordedReaction.otherDescription}
-                </p>
-              )}
-            </Card>
-          )}
-        </TabsContent>
-
-        {/* TAB 2: Reactions & Comfort Care */}
-        <TabsContent value="care" className="space-y-3.5 pt-1">
-          <Card className="bg-white border-slate-100 rounded-2xl p-4 sm:p-5 shadow-xs space-y-3">
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-xl bg-pink-100 text-pink-700 flex items-center justify-center font-bold shrink-0">
-                <HeartPulse className="w-4 h-4" />
-              </div>
-              <div>
-                <CardTitle className="text-sm sm:text-base font-bold text-slate-900">Expected Reactions & Care</CardTitle>
-                <CardDescription className="text-[11px] text-slate-400">Normal physiological immune responses and home care</CardDescription>
-              </div>
-            </div>
-
-            <div className="p-3 bg-pink-50/70 border border-pink-100 rounded-xl">
-              <p className="text-xs sm:text-sm font-semibold text-pink-900 leading-relaxed">
-                {vaccine.expectedReactions}
-              </p>
-            </div>
-
-            <div className="text-[11px] sm:text-xs text-slate-600 space-y-1.5">
-              <p className="font-semibold text-slate-700">Recommended Comfort Measures:</p>
-              <ul className="list-disc pl-4 space-y-1 text-slate-500">
-                <li>Apply cool, damp cloth to injection area to soothe localized tenderness.</li>
-                <li>Offer plenty of fluids and maintain a comfortable room temperature.</li>
-                <li>Administer infant paracetamol only if advised by your medical practitioner.</li>
-                <li>Seek immediate medical advice if high fever (&gt;39°C) or persistent crying lasts over 24 hours.</li>
-              </ul>
-            </div>
-          </Card>
-        </TabsContent>
+        {/* TAB 2: Model Adverse Reaction Predictions & Comfort Care */}
+        <VaccineReactionsTab
+          isFirstVaccine={isFirstVaccine}
+          vaccine={vaccine}
+          activeChild={activeChild}
+          schedule={schedule}
+          modelPrediction={modelPrediction}
+          loadingPrediction={loadingPrediction}
+          predictionError={predictionError}
+          fetchModelPrediction={fetchModelPrediction}
+        />
       </Tabs>
 
       {/* POPUP 1: Record a Reaction (Current Illness & Medication) */}
