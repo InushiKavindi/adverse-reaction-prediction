@@ -13,7 +13,11 @@ from backend.app.schemas.child import (
     calculate_age_in_months
 )
 from backend.app.interfaces.repositories import IChildRepository
-from backend.app.services.schedule_service import generate_vaccine_schedule
+from backend.app.services.schedule_service import (
+    generate_vaccine_schedule,
+    NATIONAL_VACCINE_DEFINITIONS,
+    add_months_to_date
+)
 from backend.app.services.dependencies import get_child_repository, get_current_user
 
 router = APIRouter(prefix="/children", tags=["Children Profiles & Schedules"])
@@ -170,8 +174,30 @@ def update_vaccine_status(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
     date_completed = update_in.date_completed
-    if update_in.status == "completed" and not date_completed:
-        date_completed = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    if update_in.status == "completed":
+        # Disallow marking as completed before scheduled date arrives
+        target_vax = next((v for v in NATIONAL_VACCINE_DEFINITIONS if v["id"] == vax_id), None)
+        if target_vax:
+            dob = None
+            if child.birth_date:
+                for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y", "%Y/%m/%d"):
+                    try:
+                        dob = datetime.strptime(child.birth_date.strip(), fmt).date()
+                        break
+                    except Exception:
+                        pass
+            if not dob:
+                dob = datetime.now(timezone.utc).date()
+            due_date = add_months_to_date(dob, target_vax["targetAgeMonths"])
+            today = datetime.now(timezone.utc).date()
+            if due_date > today:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Cannot complete milestone before its scheduled date ({due_date.strftime('%m/%d/%Y')})"
+                )
+
+        if not date_completed:
+            date_completed = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     elif update_in.status != "completed":
         date_completed = None
 

@@ -3,10 +3,17 @@ from typing import Optional, List, Dict, Any
 from datetime import datetime, date
 
 def calculate_age_in_months(birth_date_str: str) -> float:
-    """Accurately calculates age in months from DOB string (YYYY-MM-DD)."""
+    """Accurately calculates age in months from DOB string."""
     try:
-        parts = [int(p) for p in birth_date_str.split("-")]
-        dob = date(parts[0], parts[1], parts[2])
+        dob = None
+        for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y", "%Y/%m/%d"):
+            try:
+                dob = datetime.strptime(birth_date_str.strip(), fmt).date()
+                break
+            except Exception:
+                pass
+        if not dob:
+            return 0.0
         today = date.today()
         months = (today.year - dob.year) * 12 + (today.month - dob.month)
         if today.day < dob.day:

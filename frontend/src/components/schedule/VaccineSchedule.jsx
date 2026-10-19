@@ -10,7 +10,6 @@ import {
   CheckCircle2,
   AlertCircle,
   Syringe,
-  ShieldCheck,
   Sparkles
 } from "lucide-react";
 import { Card, CardTitle } from "../ui/card";
@@ -20,18 +19,21 @@ import { Badge } from "../ui/badge";
 function formatDisplayDate(dateStr) {
   if (!dateStr) return "";
   try {
-    const parts = dateStr.split("-");
-    if (parts.length === 3) {
-      const year = parseInt(parts[0], 10);
-      const monthIndex = parseInt(parts[1], 10) - 1;
-      const day = parseInt(parts[2], 10);
-      const monthNames = [
-        "January", "February", "March", "April", "May", "June",
-        "July", "August", "September", "October", "November", "December"
-      ];
-      if (monthIndex >= 0 && monthIndex < 12) {
-        return `${day} ${monthNames[monthIndex]} ${year}`;
+    if (typeof dateStr === "string" && dateStr.includes("/")) {
+      const parts = dateStr.split("/");
+      if (parts.length === 3) {
+        const m = parts[0].padStart(2, "0");
+        const d = parts[1].padStart(2, "0");
+        const y = parts[2];
+        return `${m}/${d}/${y}`;
       }
+    }
+    const parts = String(dateStr).split("-");
+    if (parts.length === 3) {
+      const year = parts[0];
+      const month = parts[1].padStart(2, "0");
+      const day = parts[2].padStart(2, "0");
+      return `${month}/${day}/${year}`;
     }
   } catch {
     // fallback to original string
@@ -167,9 +169,7 @@ export default function VaccineSchedule({ onSelectVaccine }) {
             const isFirst = index === 0;
             const isLast = index === filteredSchedule.length - 1;
 
-            const cardDate = isCompleted
-              ? formatDisplayDate(item.dateCompleted || item.dueDate)
-              : formatDisplayDate(item.dueDate);
+            const cardDate = formatDisplayDate(item.dueDate);
 
             return (
               <div key={item.id} className="flex gap-3 sm:gap-6 min-w-0 group">
@@ -188,14 +188,14 @@ export default function VaccineSchedule({ onSelectVaccine }) {
                       isCompleted
                         ? "bg-[#0ea5e9] text-white ring-2 ring-sky-200"
                         : isDue
-                        ? "bg-[#0ea5e9] text-white ring-4 ring-sky-300 animate-pulse scale-105"
+                        ? "bg-[#0ea5e9] text-white ring-4 ring-sky-300"
                         : "bg-slate-200 text-slate-400 border-slate-300"
                     }`}
                   >
                     {isCompleted ? (
                       <Check className="w-3.5 h-3.5 text-white stroke-[3]" />
                     ) : isDue ? (
-                      <div className="w-2.5 h-2.5 rounded-full bg-white animate-ping" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-white" />
                     ) : (
                       <Lock className="w-3 h-3 text-slate-400" />
                     )}
@@ -241,7 +241,7 @@ export default function VaccineSchedule({ onSelectVaccine }) {
                       ) : isDue ? (
                         <Badge
                           variant="outline"
-                          className="border-sky-400 bg-sky-50 text-sky-600 font-semibold px-3 py-1 text-xs rounded-full gap-1.5 shrink-0 animate-pulse"
+                          className="border-sky-400 bg-sky-50 text-sky-600 font-semibold px-3 py-1 text-xs rounded-full gap-1.5 shrink-0"
                         >
                           <AlertCircle className="w-3.5 h-3.5 text-sky-600" />
                           <span>Due Now</span>
@@ -277,8 +277,8 @@ export default function VaccineSchedule({ onSelectVaccine }) {
                       )}
                     </div>
 
-                    {/* Clinical Details Row (3-column responsive strip) */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 pt-3 mt-1 border-t border-slate-100 text-xs text-slate-600 font-medium">
+                    {/* Clinical Details Row (2-column responsive strip) */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 pt-3 mt-1 border-t border-slate-100 text-xs text-slate-600 font-medium">
                       <div className="flex items-center gap-2 min-w-0">
                         <Syringe className="w-3.5 h-3.5 text-pink-500 shrink-0" />
                         <span className="truncate">
@@ -289,12 +289,6 @@ export default function VaccineSchedule({ onSelectVaccine }) {
                         <Calendar className="w-3.5 h-3.5 text-sky-500 shrink-0" />
                         <span className="truncate">
                           <span className="text-slate-400">Date:</span> {cardDate}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 min-w-0">
-                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                        <span className="truncate">
-                          <span className="text-slate-400">Dosage:</span> {item.dosage || "Standard Dose"}
                         </span>
                       </div>
                     </div>

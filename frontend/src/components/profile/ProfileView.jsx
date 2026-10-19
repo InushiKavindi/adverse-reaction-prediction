@@ -148,8 +148,8 @@ export default function ProfileView() {
             <div className="space-y-3.5">
               {childrenList.map((child) => {
                 const isActive = child.id === activeChild?.id;
-                const hasIllness = child.currentIllness && child.currentIllness.trim() !== "" && child.currentIllness.toLowerCase() !== "none";
-                const hasMedication = child.currentMedication && child.currentMedication.trim() !== "" && child.currentMedication.toLowerCase() !== "none";
+                const hasIllness = child.currentIllness && child.currentIllness.trim() !== "" && !["none", "no", "none reported"].includes(child.currentIllness.trim().toLowerCase());
+                const hasMedication = child.currentMedication && child.currentMedication.trim() !== "" && !["none", "no", "none reported"].includes(child.currentMedication.trim().toLowerCase());
 
                 return (
                   <Card

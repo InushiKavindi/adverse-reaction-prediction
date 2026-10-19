@@ -159,14 +159,20 @@ def generate_vaccine_schedule(birth_date_str: str, vaccine_records: Optional[Dic
     Sequential rule: When a vaccine is marked as completed, the next vaccine is unlocked and can be seen!
     """
     records = vaccine_records or {}
-    try:
-        parts = [int(p) for p in birth_date_str.split("-")]
-        dob = date(parts[0], parts[1], parts[2])
-    except Exception:
+    dob = None
+    if birth_date_str:
+        for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y", "%Y/%m/%d"):
+            try:
+                dob = datetime.strptime(birth_date_str.strip(), fmt).date()
+                break
+            except Exception:
+                pass
+    if not dob:
         dob = date.today()
 
     today = date.today()
     schedule_items: List[VaccineScheduleItem] = []
+    prev_is_completed = False
 
     for index, vax in enumerate(NATIONAL_VACCINE_DEFINITIONS):
         due_date = add_months_to_date(dob, vax["targetAgeMonths"])
@@ -177,33 +183,36 @@ def generate_vaccine_schedule(birth_date_str: str, vaccine_records: Optional[Dic
         custom_status = rec.get("status")
         date_completed = rec.get("dateCompleted")
 
-        # Check if immediately previous milestone is completed
-        prev_is_completed = False
-        if index > 0:
-            prev_id = NATIONAL_VACCINE_DEFINITIONS[index - 1]["id"]
-            prev_rec = records.get(prev_id, {})
-            prev_is_completed = (prev_rec.get("status") == "completed")
-
         # Determine status and clickability
-        if custom_status == "completed":
+        # Constraint: A vaccine cannot be completed until the scheduled day comes (due_date <= today)
+        if custom_status == "completed" and due_date <= today:
             status = "completed"
             is_clickable = True
             if not date_completed:
                 date_completed = due_date_str
+            prev_is_completed = True
         elif prev_is_completed:
-            # "when a vaccine mark as completed the next vaccine should be able to see"
-            # Previous milestone completed => NEXT milestone unlocked & due now!
+            # "if the child is ony 18 months then next vaccine should be available, it is correctly working now"
+            # Previous milestone completed => NEXT milestone unlocked & available to see!
             status = "due"
             is_clickable = True
+            date_completed = None
+            prev_is_completed = False
         elif index == 0:
             status = "due" if due_date <= today else "upcoming"
             is_clickable = True
+            date_completed = None
+            prev_is_completed = False
         elif due_date <= today:
             status = "due"
             is_clickable = True
+            date_completed = None
+            prev_is_completed = False
         else:
             status = "upcoming"
             is_clickable = False
+            date_completed = None
+            prev_is_completed = False
 
         schedule_items.append(
             VaccineScheduleItem(
