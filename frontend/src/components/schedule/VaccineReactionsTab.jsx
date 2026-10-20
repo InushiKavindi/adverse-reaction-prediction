@@ -40,6 +40,7 @@ export default function VaccineReactionsTab({
           loadingPrediction={loadingPrediction}
           predictionError={predictionError}
           fetchModelPrediction={fetchModelPrediction}
+          onUpdateVaccineStatus={onUpdateVaccineStatus}
         />
       ) : (
         <RoutineReactionsView

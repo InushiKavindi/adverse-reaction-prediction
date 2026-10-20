@@ -5,15 +5,13 @@ import { Button } from "../ui/button";
 import { calculateAgeMonthsAtDate } from "./vaccineUtils";
 
 export const SYMPTOM_OPTIONS = [
-  { id: "no_reaction", label: "No Reaction", emoji: "😊", isNoReaction: true },
-  { id: "fever", label: "Fever", emoji: "🌡️" },
-  { id: "swelling", label: "Injection-site Swelling", emoji: "💉" },
-  { id: "redness", label: "Redness", emoji: "🔴" },
-  { id: "pain", label: "Pain", emoji: "⚡" },
-  { id: "irritability", label: "Irritability", emoji: "🙁" },
-  { id: "rash", label: "Rash", emoji: "🌸" },
-  { id: "vomiting", label: "Vomiting", emoji: "😣" },
-  { id: "others", label: "Other", emoji: "➕" }
+  { id: "no_reaction", label: "No Reaction", isNoReaction: true },
+  { id: "fever", label: "Fever" },
+  { id: "swelling", label: "Injection-site Swelling" },
+  { id: "redness", label: "Redness" },
+  { id: "pain", label: "Pain" },
+  { id: "rash", label: "Rash" },
+  { id: "others", label: "Other" }
 ];
 
 export function ReactionIllnessModal({
@@ -158,10 +156,7 @@ export function LogReactionsModal({
                     onClick={() => toggleSymptom(sym.id)}
                     className="flex items-center justify-between cursor-pointer select-none"
                   >
-                    <div className="flex items-center gap-2.5">
-                      <span className="text-base shrink-0">{sym.emoji}</span>
-                      <span className="font-bold text-slate-800 text-xs sm:text-sm">{sym.label}</span>
-                    </div>
+                    <span className="font-bold text-slate-800 text-xs sm:text-sm">{sym.label}</span>
 
                     <div
                       className={`w-5 h-5 rounded-md border flex items-center justify-center transition ${

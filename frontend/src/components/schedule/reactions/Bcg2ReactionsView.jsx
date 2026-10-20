@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   HeartPulse,
   Clock,
@@ -6,7 +6,9 @@ import {
   AlertTriangle,
   Stethoscope,
   RefreshCw,
-  Info
+  Info,
+  ShieldCheck,
+  CheckCircle2
 } from "lucide-react";
 import { Card, CardTitle, CardDescription } from "../../ui/card";
 import { Button } from "../../ui/button";
@@ -17,11 +19,38 @@ export default function Bcg2ReactionsView({
   modelPrediction,
   loadingPrediction,
   predictionError,
-  fetchModelPrediction
+  fetchModelPrediction,
+  onUpdateVaccineStatus
 }) {
   const activeBcg2Prediction = modelPrediction;
   const isBcg2Loading = loadingPrediction;
   const activeBcg2Error = predictionError;
+
+  const currentReaction = vaccine?.reaction || {};
+  const [scarStatus, setScarStatus] = useState(currentReaction.bcgScarStatus || null);
+  const [savingBcg, setSavingBcg] = useState(false);
+
+  useEffect(() => {
+    const rx = vaccine?.reaction || {};
+    setScarStatus(rx.bcgScarStatus || null);
+  }, [vaccine?.reaction]);
+
+  const handleSelectScarStatus = async (status) => {
+    const nextStatus = scarStatus === status ? null : status;
+    setScarStatus(nextStatus);
+    const updatedReaction = {
+      ...(vaccine?.reaction || {}),
+      bcgScarStatus: nextStatus
+    };
+
+    if (onUpdateVaccineStatus) {
+      setSavingBcg(true);
+      const statusToKeep = vaccine.status || "due";
+      const dateToKeep = statusToKeep === "completed" ? (vaccine.dateCompleted || new Date().toISOString().split("T")[0]) : null;
+      await onUpdateVaccineStatus(statusToKeep, dateToKeep, updatedReaction);
+      setSavingBcg(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -107,33 +136,7 @@ export default function Bcg2ReactionsView({
         {/* BCG2 Model Prediction Output */}
         {activeBcg2Prediction && !isBcg2Loading && (
           <div className="space-y-4 animate-in fade-in duration-200">
-            {/* Clinical Risk Summary Banner */}
-            <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${activeBcg2Prediction.risk_level === "High"
-              ? "bg-rose-50/70 border-rose-200"
-              : activeBcg2Prediction.risk_level === "Moderate"
-                ? "bg-amber-50/70 border-amber-200"
-                : "bg-emerald-50/70 border-emerald-200"
-              }`}>
-              <div className="space-y-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-extrabold uppercase tracking-wide text-slate-700">
-                    AI Clinical Risk Assessment:
-                  </span>
-                  <Badge className={
-                    activeBcg2Prediction.risk_level === "High"
-                      ? "bg-rose-600 text-white"
-                      : activeBcg2Prediction.risk_level === "Moderate"
-                        ? "bg-amber-600 text-white"
-                        : "bg-emerald-600 text-white"
-                  }>
-                    {activeBcg2Prediction.risk_level} Risk
-                  </Badge>
-                </div>
-                <p className="text-xs sm:text-sm font-semibold text-slate-800 leading-relaxed">
-                  {activeBcg2Prediction.summary}
-                </p>
-              </div>
-            </div>
+
 
             {/* Symptoms Probabilities & Onset Times */}
             <div className="space-y-2.5">
@@ -235,6 +238,97 @@ export default function Bcg2ReactionsView({
             </div>
           </div>
         )}
+      </Card>
+
+      {/* BCG Scar Formation Assessment (Week 6 – 12) */}
+      <Card className="bg-white border-slate-100 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xs space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+              <ShieldCheck className="w-4 h-4 text-emerald-600" />
+              <span>BCG Scar Formation Assessment (Week 6 – 12)</span>
+            </h4>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              Check your baby's right upper arm injection site to verify whether a permanent BCG scar has developed.
+            </p>
+          </div>
+
+          {scarStatus && (
+            <Badge
+              variant="outline"
+              className={`self-start sm:self-auto text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
+                scarStatus === "present"
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-300"
+                  : "bg-amber-50 text-amber-700 border-amber-300"
+              }`}
+            >
+              {scarStatus === "present" ? "✓ Scar Present" : "⚠ Scar Absent"}
+            </Badge>
+          )}
+        </div>
+
+        {/* Assessment Buttons */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <button
+            type="button"
+            onClick={() => handleSelectScarStatus("present")}
+            disabled={savingBcg}
+            className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
+              scarStatus === "present"
+                ? "bg-emerald-50/80 border-emerald-400 ring-2 ring-emerald-400/20 shadow-xs"
+                : "bg-slate-50/60 border-slate-200 hover:bg-slate-50 hover:border-slate-300"
+            }`}
+          >
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <span className="font-bold text-xs sm:text-sm text-slate-900 flex items-center gap-1.5">
+                <CheckCircle2
+                  className={`w-4 h-4 ${
+                    scarStatus === "present" ? "text-emerald-600" : "text-slate-400"
+                  }`}
+                />
+                Scar Present
+              </span>
+              {scarStatus === "present" && (
+                <span className="text-[10px] font-extrabold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                  Marked Present
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-slate-500 leading-relaxed">
+              Permanent white scar has developed. Confirms effective cellular immunity. No 2nd dose needed.
+            </p>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleSelectScarStatus("absent")}
+            disabled={savingBcg}
+            className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
+              scarStatus === "absent"
+                ? "bg-amber-50/80 border-amber-400 ring-2 ring-amber-400/20 shadow-xs"
+                : "bg-slate-50/60 border-slate-200 hover:bg-slate-50 hover:border-slate-300"
+            }`}
+          >
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <span className="font-bold text-xs sm:text-sm text-slate-900 flex items-center gap-1.5">
+                <AlertCircle
+                  className={`w-4 h-4 ${
+                    scarStatus === "absent" ? "text-amber-600" : "text-slate-400"
+                  }`}
+                />
+                Scar Absent
+              </span>
+              {scarStatus === "absent" && (
+                <span className="text-[10px] font-extrabold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full">
+                  Marked Absent
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-slate-500 leading-relaxed">
+              No scar visible after 6–12 weeks. Clinical protocol advises BCG 2nd dose revaccination.
+            </p>
+          </button>
+        </div>
       </Card>
 
       {/* BCG2 Revaccination Clinical Care & Guidance Card */}

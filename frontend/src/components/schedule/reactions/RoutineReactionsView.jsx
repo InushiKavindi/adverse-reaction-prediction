@@ -79,33 +79,7 @@ export default function RoutineReactionsView({
         {/* Model Prediction Results */}
         {modelPrediction && (
           <div className="space-y-4">
-            {/* Clinical Risk Summary Banner */}
-            <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${modelPrediction.risk_level === "High"
-              ? "bg-rose-50/70 border-rose-200"
-              : modelPrediction.risk_level === "Moderate"
-                ? "bg-amber-50/70 border-amber-200"
-                : "bg-emerald-50/70 border-emerald-200"
-              }`}>
-              <div className="space-y-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-extrabold uppercase tracking-wide text-slate-700">
-                    AI Clinical Risk Assessment:
-                  </span>
-                  <Badge className={
-                    modelPrediction.risk_level === "High"
-                      ? "bg-rose-600 text-white"
-                      : modelPrediction.risk_level === "Moderate"
-                        ? "bg-amber-600 text-white"
-                        : "bg-emerald-600 text-white"
-                  }>
-                    {modelPrediction.risk_level} Risk
-                  </Badge>
-                </div>
-                <p className="text-xs sm:text-sm font-semibold text-slate-800 leading-relaxed">
-                  {modelPrediction.summary}
-                </p>
-              </div>
-            </div>
+
 
             {/* Symptoms Probabilities & Onset Times */}
             <div className="space-y-2.5">

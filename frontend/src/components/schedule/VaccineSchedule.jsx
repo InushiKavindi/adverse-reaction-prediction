@@ -46,13 +46,24 @@ export default function VaccineSchedule({ onSelectVaccine }) {
   const [activeFilter, setActiveFilter] = useState("all"); // 'all' | 'completed' | 'due' | 'upcoming'
   const [lockedNotice, setLockedNotice] = useState(null);
 
-  const vax1Item = schedule.find((s) => s.id === "vax-1");
+  const vax1Item = schedule.find(
+    (s) =>
+      s.id === "vax-1" ||
+      (s.vaccineName?.toLowerCase().includes("bcg") &&
+        !s.vaccineName?.toLowerCase().includes("bcg 2") &&
+        !s.vaccineName?.toLowerCase().includes("bcg2"))
+  );
   const bcgScarStatus = vax1Item?.reaction?.bcgScarStatus;
 
   // BCG2 should display ONLY when selected scar absent, if scar is present then BCG2 is no need
   const visibleSchedule = schedule.filter((item) => {
-    if (item.id === "vax-bcg2" || item.vaccineName?.toLowerCase().includes("bcg 2") || item.vaccineName?.toLowerCase().includes("bcg2")) {
-      return bcgScarStatus === "absent" || item.status === "completed";
+    if (
+      item.id === "vax-bcg2" ||
+      item.vaccineName?.toLowerCase().includes("bcg 2") ||
+      item.vaccineName?.toLowerCase().includes("bcg2")
+    ) {
+      if (bcgScarStatus === "present") return false;
+      return bcgScarStatus === "absent";
     }
     return true;
   });

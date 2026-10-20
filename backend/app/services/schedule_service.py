@@ -205,8 +205,8 @@ def generate_vaccine_schedule(birth_date_str: str, vaccine_records: Optional[Dic
             vax1_rx = vax1_rec.get("reaction") or {}
             scar_status = vax1_rx.get("bcgScarStatus")
             
-            # If scar is NOT absent (or scar is present) and BCG2 is not already recorded, do NOT display BCG2
-            if scar_status != "absent" and custom_status != "completed":
+            # If scar is NOT absent (or scar is present), do NOT display BCG2
+            if scar_status != "absent":
                 continue
 
             # Allow parent to set/override scheduled date for BCG2 (recommended by doctor)

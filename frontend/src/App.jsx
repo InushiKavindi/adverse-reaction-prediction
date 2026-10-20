@@ -79,7 +79,7 @@ function DashboardMain({
         )}
 
         {currentPage === "history" && (
-          <PredictionHistory />
+          <PredictionHistory onNewScreening={() => setCurrentPage("schedule")} />
         )}
 
         {currentPage === "profile" && <ProfileView />}
