@@ -20,11 +20,26 @@ NATIONAL_VACCINE_DEFINITIONS = [
         "dosage": "0.05 ml (infant < 1 month) / 0.1 ml"
     },
     {
+        "id": "vax-bcg2",
+        "milestone": "2 - 6 MONTHS",
+        "ageRange": "6 weeks - 6 months",
+        "targetAgeMonths": 2,
+        "vaccineName": "BCG 2 (Revaccination)",
+        "fullVaccineName": "BCG 2nd Dose (Revaccination if Scar Absent)",
+        "route": "Upper Arm Injection",
+        "fullRoute": "Intradermal (Right upper arm)",
+        "diseases": "Tuberculosis (Miliary TB & Tubercular Meningitis revaccination)",
+        "expectedReactions": "Mild fever, localized redness or swelling, papule formation.",
+        "severityLevel": "Low to Moderate Risk",
+        "batchNumber": "BCG-2024-B2",
+        "dosage": "0.1 ml Intradermal"
+    },
+    {
         "id": "vax-2",
         "milestone": "2 MONTHS",
         "ageRange": "8 weeks",
         "targetAgeMonths": 2,
-        "vaccineName": "OPV 1 + IPV 1 + Pentavalent 1",
+        "vaccineName": "OPV 1 + Pentavalent 1",
         "fullVaccineName": "Pentavalent 1, OPV 1 & IPV",
         "route": "Thigh Injection & Oral Drops",
         "fullRoute": "Intramuscular & Oral Drops",
@@ -39,7 +54,7 @@ NATIONAL_VACCINE_DEFINITIONS = [
         "milestone": "4 MONTHS",
         "ageRange": "16 weeks",
         "targetAgeMonths": 4,
-        "vaccineName": "OPV 2 + IPV 2 + Pentavalent 2",
+        "vaccineName": "OPV 2 + IPV + Pentavalent 2",
         "fullVaccineName": "Pentavalent 2, OPV 2 & IPV Booster",
         "route": "Thigh Injection & Oral Drops",
         "fullRoute": "Intramuscular & Inactivated Polio",
@@ -99,8 +114,8 @@ NATIONAL_VACCINE_DEFINITIONS = [
         "milestone": "18 MONTHS",
         "ageRange": "18 months",
         "targetAgeMonths": 18,
-        "vaccineName": "MMR 2 + DPT Booster + OPV 4",
-        "fullVaccineName": "MMR 2 & DPT Booster, OPV 4",
+        "vaccineName": "DPT + OPV 4",
+        "fullVaccineName": "DPT Booster & OPV 4",
         "route": "Thigh Injection & Oral Drops",
         "fullRoute": "Intramuscular (Anterolateral thigh / Deltoid)",
         "diseases": "Secondary MMR Booster & Whooping Cough Immunity",
@@ -114,7 +129,7 @@ NATIONAL_VACCINE_DEFINITIONS = [
         "milestone": "3 YEARS",
         "ageRange": "36 months",
         "targetAgeMonths": 36,
-        "vaccineName": "JE Booster",
+        "vaccineName": "MMR 2",
         "fullVaccineName": "JE Booster (if required)",
         "route": "Subcutaneous Injection",
         "fullRoute": "Subcutaneous",
@@ -182,6 +197,45 @@ def generate_vaccine_schedule(birth_date_str: str, vaccine_records: Optional[Dic
         rec = records.get(vax["id"], {})
         custom_status = rec.get("status")
         date_completed = rec.get("dateCompleted")
+
+        # Special handling for conditional revaccination: BCG 2nd dose
+        # BCG2 should display ONLY when selected scar absent; if scar is present then BCG2 is no need
+        if vax["id"] == "vax-bcg2":
+            vax1_rec = records.get("vax-1", {})
+            vax1_rx = vax1_rec.get("reaction") or {}
+            scar_status = vax1_rx.get("bcgScarStatus")
+            
+            # If scar is NOT absent (or scar is present) and BCG2 is not already recorded, do NOT display BCG2
+            if scar_status != "absent" and custom_status != "completed":
+                continue
+
+            status = "completed" if custom_status == "completed" else "due"
+            is_clickable = True
+            date_completed = (date_completed or due_date_str) if custom_status == "completed" else None
+
+            schedule_items.append(
+                VaccineScheduleItem(
+                    id=vax["id"],
+                    milestone=vax["milestone"],
+                    ageRange=vax["ageRange"],
+                    targetAgeMonths=float(vax["targetAgeMonths"]),
+                    vaccineName=vax["vaccineName"],
+                    route=vax["route"],
+                    diseases=vax["diseases"],
+                    status=status,
+                    dueDate=due_date_str,
+                    dateCompleted=date_completed,
+                    expectedReactions=vax["expectedReactions"],
+                    severityLevel=vax["severityLevel"],
+                    batchNumber=vax["batchNumber"],
+                    dosage=vax.get("dosage"),
+                    isClickable=is_clickable,
+                    reaction=rec.get("reaction")
+                )
+            )
+            # Crucial: continue without consuming or altering prev_is_completed,
+            # ensuring routine schedule milestones (vax-1 -> vax-2 -> ...) unlock seamlessly.
+            continue
 
         # Determine status and clickability
         # Constraint: A vaccine cannot be completed until the scheduled day comes (due_date <= today)

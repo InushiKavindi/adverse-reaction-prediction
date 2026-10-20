@@ -7,6 +7,7 @@ export function mapVaccineToModelType(vaccine) {
   const id = String(vaccine.id || "").toLowerCase();
   const name = String(vaccine.vaccineName || vaccine.name || "").toLowerCase();
 
+  if (id === "vax-bcg2" || name.includes("bcg 2") || name.includes("bcg2")) return "BCG2";
   if (id === "vax-1" || name.includes("bcg")) return "BCG1";
   if (id === "vax-2" || name.includes("pentavalent 1") || name.includes("pentavalent1") || name.includes("opv 1 + ipv 1")) return "Pentavalent1,OPV1";
   if (id === "vax-3" || name.includes("pentavalent 2") || name.includes("pentavalent2") || name.includes("opv 2 + ipv 2")) return "Pentavalent2,OPV2,IPV";

@@ -45,6 +45,19 @@ export const VACCINE_SCHEDULE = [
     batchNumber: "BCG-2024-A9"
   },
   {
+    id: "vax-bcg2",
+    milestone: "2 - 6 Months",
+    ageRange: "6 weeks - 6 months",
+    targetAgeMonths: 2,
+    vaccineName: "BCG 2 (Revaccination)",
+    route: "Intradermal (Right upper arm)",
+    diseases: "Tuberculosis (Miliary TB & Tubercular Meningitis revaccination)",
+    status: "due",
+    expectedReactions: "Mild papule, temporary low-grade temperature or slight swelling.",
+    severityLevel: "Low to Moderate Risk",
+    batchNumber: "BCG-2024-B2"
+  },
+  {
     id: "vax-2",
     milestone: "2 Months",
     ageRange: "8 weeks",

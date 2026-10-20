@@ -43,7 +43,8 @@ export default function VaccineDetailView({ vaccine: initialVaccine, onBack, onP
   // Read current live record from schedule
   const vaccine = schedule.find((s) => s.id === initialVaccine?.id) || initialVaccine;
   const currentIndex = schedule.findIndex((s) => s.id === vaccine?.id);
-  const isFirstVaccine = vaccine?.id === "vax-1" || currentIndex === 0 || vaccine?.vaccineName?.toLowerCase().includes("bcg");
+  const isBcg2 = vaccine?.id === "vax-bcg2" || vaccine?.vaccineName?.toLowerCase().includes("bcg 2") || vaccine?.vaccineName?.toLowerCase().includes("bcg2");
+  const isFirstVaccine = !isBcg2 && (vaccine?.id === "vax-1" || (vaccine?.vaccineName?.toLowerCase().includes("bcg") && !vaccine?.vaccineName?.toLowerCase().includes("bcg 2") && !vaccine?.vaccineName?.toLowerCase().includes("bcg2")));
 
   // ML Model Prediction State for this milestone
   const [modelPrediction, setModelPrediction] = useState(null);
@@ -53,10 +54,10 @@ export default function VaccineDetailView({ vaccine: initialVaccine, onBack, onP
   const fetchModelPrediction = useCallback(async () => {
     if (!vaccine) return;
 
-    // BCG is administered within 24 hours of birth. At birth, clinical history (allergies,
+    // BCG1 is administered within 24 hours of birth. At birth, clinical history (allergies,
     // current illness, medications) is not established, so individual probability forecasts and onsets do not apply.
-    const isBcg = vaccine.id === "vax-1" || currentIndex === 0 || vaccine.vaccineName?.toLowerCase().includes("bcg");
-    if (isBcg) {
+    // However, BCG2 (administered between 6 weeks and 6 months) DOES have clinical prediction forecasts!
+    if (isFirstVaccine) {
       setModelPrediction(null);
       setLoadingPrediction(false);
       setPredictionError(null);
@@ -441,6 +442,7 @@ export default function VaccineDetailView({ vaccine: initialVaccine, onBack, onP
         {/* TAB 2: Model Adverse Reaction Predictions & Comfort Care */}
         <VaccineReactionsTab
           isFirstVaccine={isFirstVaccine}
+          isBcg2={isBcg2}
           vaccine={vaccine}
           activeChild={activeChild}
           schedule={schedule}
@@ -448,6 +450,8 @@ export default function VaccineDetailView({ vaccine: initialVaccine, onBack, onP
           loadingPrediction={loadingPrediction}
           predictionError={predictionError}
           fetchModelPrediction={fetchModelPrediction}
+          onUpdateVaccineStatus={handleSaveStatus}
+          onSelectVaccine={onSelectVaccine}
         />
       </Tabs>
 

@@ -46,7 +46,18 @@ export default function VaccineSchedule({ onSelectVaccine }) {
   const [activeFilter, setActiveFilter] = useState("all"); // 'all' | 'completed' | 'due' | 'upcoming'
   const [lockedNotice, setLockedNotice] = useState(null);
 
-  const filteredSchedule = schedule.filter((item) => {
+  const vax1Item = schedule.find((s) => s.id === "vax-1");
+  const bcgScarStatus = vax1Item?.reaction?.bcgScarStatus;
+
+  // BCG2 should display ONLY when selected scar absent, if scar is present then BCG2 is no need
+  const visibleSchedule = schedule.filter((item) => {
+    if (item.id === "vax-bcg2" || item.vaccineName?.toLowerCase().includes("bcg 2") || item.vaccineName?.toLowerCase().includes("bcg2")) {
+      return bcgScarStatus === "absent" || item.status === "completed";
+    }
+    return true;
+  });
+
+  const filteredSchedule = visibleSchedule.filter((item) => {
     if (activeFilter === "all") return true;
     if (activeFilter === "due") return item.status === "due";
     if (activeFilter === "completed") return item.status === "completed";
@@ -54,9 +65,9 @@ export default function VaccineSchedule({ onSelectVaccine }) {
     return true;
   });
 
-  const completedCount = schedule.filter((s) => s.status === "completed").length;
-  const dueCount = schedule.filter((s) => s.status === "due").length;
-  const upcomingCount = schedule.filter((s) => s.status === "upcoming").length;
+  const completedCount = visibleSchedule.filter((s) => s.status === "completed").length;
+  const dueCount = visibleSchedule.filter((s) => s.status === "due").length;
+  const upcomingCount = visibleSchedule.filter((s) => s.status === "upcoming").length;
 
   const handleCardClick = (item, isClickable) => {
     if (isClickable) {
@@ -121,7 +132,7 @@ export default function VaccineSchedule({ onSelectVaccine }) {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card className="bg-white border-slate-100 p-4 shadow-xs">
           <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Total Milestones</p>
-          <p className="text-2xl font-extrabold text-slate-800 mt-1">{schedule.length}</p>
+          <p className="text-2xl font-extrabold text-slate-800 mt-1">{visibleSchedule.length}</p>
         </Card>
         <Card className="bg-emerald-50/70 border-emerald-100 p-4 shadow-xs">
           <p className="text-[11px] font-bold text-emerald-600 uppercase tracking-wide">Completed</p>
@@ -241,10 +252,14 @@ export default function VaccineSchedule({ onSelectVaccine }) {
                       ) : isDue ? (
                         <Badge
                           variant="outline"
-                          className="border-sky-400 bg-sky-50 text-sky-600 font-semibold px-3 py-1 text-xs rounded-full gap-1.5 shrink-0"
+                          className={`${
+                            item.id === "vax-bcg2"
+                              ? "border-amber-400 bg-amber-50 text-amber-700"
+                              : "border-sky-400 bg-sky-50 text-sky-600"
+                          } font-semibold px-3 py-1 text-xs rounded-full gap-1.5 shrink-0`}
                         >
-                          <AlertCircle className="w-3.5 h-3.5 text-sky-600" />
-                          <span>Due Now</span>
+                          <AlertCircle className={`w-3.5 h-3.5 ${item.id === "vax-bcg2" ? "text-amber-600" : "text-sky-600"}`} />
+                          <span>{item.id === "vax-bcg2" ? "Revaccination Due" : "Due Now"}</span>
                         </Badge>
                       ) : !isClickable ? (
                         <Badge
@@ -266,9 +281,16 @@ export default function VaccineSchedule({ onSelectVaccine }) {
 
                     {/* Vaccine Title & Protective Indication */}
                     <div className="pt-3.5 pb-2">
-                      <CardTitle className="text-base sm:text-lg font-bold text-slate-900 tracking-tight group-hover:text-sky-600 transition-colors">
-                        {item.vaccineName}
-                      </CardTitle>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <CardTitle className="text-base sm:text-lg font-bold text-slate-900 tracking-tight group-hover:text-sky-600 transition-colors">
+                          {item.vaccineName}
+                        </CardTitle>
+                        {item.id === "vax-bcg2" && (
+                          <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-800 text-[10px] font-bold">
+                            Scar Absent Revaccination
+                          </Badge>
+                        )}
+                      </div>
                       {item.diseases && (
                         <p className="text-xs sm:text-sm text-slate-500 mt-1 line-clamp-1">
                           <span className="text-slate-400 font-normal">Protects against: </span>
@@ -298,6 +320,8 @@ export default function VaccineSchedule({ onSelectVaccine }) {
                       <span className="text-[11px] font-semibold text-slate-400 truncate">
                         {isCompleted
                           ? "✓ Recorded in child's health journal"
+                          : item.id === "vax-bcg2"
+                          ? "⚠️ Revaccination if no scar developed after birth dose"
                           : isDue
                           ? "⚠️ Recommended for administration this month"
                           : "Scheduled milestone"}
