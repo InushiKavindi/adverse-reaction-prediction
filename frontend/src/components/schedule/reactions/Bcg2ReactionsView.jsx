@@ -145,7 +145,7 @@ export default function Bcg2ReactionsView({
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                 {activeBcg2Prediction.symptoms?.map((item) => {
-                  const probPercent = Math.round((item.probability || 0) * 100);
+                  const probPercent = Math.min(92, Math.round((item.probability || 0) * 100));
                   const isNoRxn = item.symptom === "no_reaction";
                   const isHighProb = probPercent >= 50;
                   const isMedProb = probPercent >= 20;

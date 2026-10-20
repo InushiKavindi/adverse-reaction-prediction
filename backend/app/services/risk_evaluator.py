@@ -48,7 +48,7 @@ class StandardClinicalRiskEvaluator(IRiskEvaluator):
 
         symptom_phrases = []
         for s in active_symptoms:
-            p_pct = int(round(probabilities.get(s, 0.0) * 100))
+            p_pct = min(92, int(round(probabilities.get(s, 0.0) * 100)))
             o_hr = onsets.get(f"{s}_onset")
             o_str = f" within ~{o_hr:.1f} hrs" if o_hr is not None else ""
             display_name = SYMPTOM_DISPLAY_NAMES.get(s, s.capitalize())

@@ -182,7 +182,8 @@ class PredictionService(IPredictionService):
         probabilities_dict: Dict[str, float] = {}
         for idx, col in enumerate(TARGET_COLS):
             val = float(y_pred_proba[idx]) if idx < len(y_pred_proba) else 0.0
-            probabilities_dict[col] = round(max(0.0, min(1.0, val)), 4)
+            # Cap probability at 0.92 so no probability ever reaches 100%
+            probabilities_dict[col] = round(max(0.0, min(0.92, val)), 4)
 
         onset_dict: Dict[str, float] = {}
         for idx, col in enumerate(ONSET_COLS):
