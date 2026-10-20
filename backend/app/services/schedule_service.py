@@ -209,7 +209,31 @@ def generate_vaccine_schedule(birth_date_str: str, vaccine_records: Optional[Dic
             if scar_status != "absent" and custom_status != "completed":
                 continue
 
-            status = "completed" if custom_status == "completed" else "due"
+            # Allow parent to set/override scheduled date for BCG2 (recommended by doctor)
+            custom_due_date = rec.get("dueDate") or (rec.get("reaction") or {}).get("scheduledDate")
+            target_age = float(vax["targetAgeMonths"])
+            if custom_due_date:
+                due_date_str = custom_due_date
+                try:
+                    s_date = datetime.strptime(custom_due_date.strip(), "%Y-%m-%d").date()
+                    calc_months = (s_date.year - dob.year) * 12 + (s_date.month - dob.month)
+                    if s_date.day < dob.day:
+                        calc_months -= 1
+                    target_age = max(1.0, float(calc_months))
+                except Exception:
+                    pass
+
+            if custom_status == "completed":
+                status = "completed"
+            elif custom_due_date:
+                try:
+                    s_date = datetime.strptime(custom_due_date.strip(), "%Y-%m-%d").date()
+                    status = "due" if s_date <= today else "upcoming"
+                except Exception:
+                    status = "due"
+            else:
+                status = "due" if due_date <= today else "upcoming"
+
             is_clickable = True
             date_completed = (date_completed or due_date_str) if custom_status == "completed" else None
 
@@ -218,12 +242,14 @@ def generate_vaccine_schedule(birth_date_str: str, vaccine_records: Optional[Dic
                     id=vax["id"],
                     milestone=vax["milestone"],
                     ageRange=vax["ageRange"],
-                    targetAgeMonths=float(vax["targetAgeMonths"]),
+                    targetAgeMonths=target_age,
                     vaccineName=vax["vaccineName"],
                     route=vax["route"],
                     diseases=vax["diseases"],
                     status=status,
                     dueDate=due_date_str,
+                    scheduledDateDob=None,
+                    customScheduledDate=custom_due_date,
                     dateCompleted=date_completed,
                     expectedReactions=vax["expectedReactions"],
                     severityLevel=vax["severityLevel"],
@@ -237,27 +263,34 @@ def generate_vaccine_schedule(birth_date_str: str, vaccine_records: Optional[Dic
             # ensuring routine schedule milestones (vax-1 -> vax-2 -> ...) unlock seamlessly.
             continue
 
+        # Check if parent/doctor added a newly scheduled date
+        custom_due_date = rec.get("dueDate") or (rec.get("reaction") or {}).get("scheduledDate")
+        effective_due_date_str = custom_due_date if custom_due_date else due_date_str
+        try:
+            effective_due_date = datetime.strptime(effective_due_date_str.strip(), "%Y-%m-%d").date()
+        except Exception:
+            effective_due_date = due_date
+
         # Determine status and clickability
-        # Constraint: A vaccine cannot be completed until the scheduled day comes (due_date <= today)
-        if custom_status == "completed" and due_date <= today:
+        # Constraint: A vaccine cannot be completed until the scheduled day comes
+        if custom_status == "completed" and effective_due_date <= today:
             status = "completed"
             is_clickable = True
             if not date_completed:
-                date_completed = due_date_str
+                date_completed = effective_due_date_str
             prev_is_completed = True
         elif prev_is_completed:
-            # "if the child is ony 18 months then next vaccine should be available, it is correctly working now"
             # Previous milestone completed => NEXT milestone unlocked & available to see!
             status = "due"
             is_clickable = True
             date_completed = None
             prev_is_completed = False
         elif index == 0:
-            status = "due" if due_date <= today else "upcoming"
+            status = "due" if effective_due_date <= today else "upcoming"
             is_clickable = True
             date_completed = None
             prev_is_completed = False
-        elif due_date <= today:
+        elif effective_due_date <= today:
             status = "due"
             is_clickable = True
             date_completed = None
@@ -278,7 +311,9 @@ def generate_vaccine_schedule(birth_date_str: str, vaccine_records: Optional[Dic
                 route=vax["route"],
                 diseases=vax["diseases"],
                 status=status,
-                dueDate=due_date_str,
+                dueDate=effective_due_date_str,
+                scheduledDateDob=due_date_str,
+                customScheduledDate=custom_due_date,
                 dateCompleted=date_completed,
                 expectedReactions=vax["expectedReactions"],
                 severityLevel=vax["severityLevel"],

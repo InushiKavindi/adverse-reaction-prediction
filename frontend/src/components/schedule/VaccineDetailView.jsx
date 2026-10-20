@@ -15,12 +15,14 @@ import { Badge } from "../ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
 import {
   ReactionIllnessModal,
-  LogReactionsModal
+  LogReactionsModal,
+  DoctorScheduledDateModal
 } from "./VaccineReactionModals";
 import {
   mapVaccineToModelType,
   formatDisplayDate,
-  hasScheduledDateArrived
+  hasScheduledDateArrived,
+  calculateAgeMonthsAtDate
 } from "./vaccineUtils";
 import VaccineOverviewTab from "./VaccineOverviewTab";
 import VaccineReactionsTab from "./VaccineReactionsTab";
@@ -39,6 +41,11 @@ export default function VaccineDetailView({ vaccine: initialVaccine, onBack, onP
   const [logSelectedSymptoms, setLogSelectedSymptoms] = useState([]);
   const [logSymptomOnsets, setLogSymptomOnsets] = useState({});
   const [logOtherDesc, setLogOtherDesc] = useState("");
+
+  // Popup 3: Doctor / Caregiver Scheduled Date Modal
+  const [showDoctorDateModal, setShowDoctorDateModal] = useState(false);
+  const [doctorDateInput, setDoctorDateInput] = useState("");
+  const [savingDoctorDate, setSavingDoctorDate] = useState(false);
 
   // Read current live record from schedule
   const vaccine = schedule.find((s) => s.id === initialVaccine?.id) || initialVaccine;
@@ -67,20 +74,32 @@ export default function VaccineDetailView({ vaccine: initialVaccine, onBack, onP
     setLoadingPrediction(true);
     setPredictionError(null);
 
-    // Check if any previous completed vaccine has an adverse reaction recorded
+    // Calculate age months at scheduled date or vaccine.targetAgeMonths
+    let effectiveAgeMonths = vaccine.targetAgeMonths !== undefined ? Number(vaccine.targetAgeMonths) : Number(activeChild?.ageMonths || 0);
+    if (vaccine.dueDate && activeChild?.birthDate) {
+      effectiveAgeMonths = calculateAgeMonthsAtDate(activeChild.birthDate, vaccine.dueDate);
+    }
+    if (isBcg2) {
+      effectiveAgeMonths = Math.max(1.5, Math.min(6.0, Number(effectiveAgeMonths.toFixed(1))));
+    }
+
+    // Check if any previous completed vaccine before this milestone has an adverse reaction recorded
     const hasPriorReaction = schedule.some(
-      (s) => s.status === "completed" && s.reaction?.hasReaction === true
+      (s) => s.id !== vaccine.id && s.status === "completed" && s.reaction?.hasReaction === true
     );
+
+    const illnessVal = activeChild?.currentIllness && activeChild.currentIllness !== "None" ? activeChild.currentIllness : "No";
+    const medVal = activeChild?.currentMedication && activeChild.currentMedication !== "None" ? activeChild.currentMedication : "No";
 
     const payload = {
       patient_identifier: activeChild?.name || "Active Child",
-      age_months: vaccine.targetAgeMonths !== undefined ? Number(vaccine.targetAgeMonths) : Number(activeChild?.ageMonths || 0),
+      age_months: effectiveAgeMonths,
       sex: activeChild?.sex || "M",
       vaccine_type: mapVaccineToModelType(vaccine),
       previous_reaction: hasPriorReaction ? "Yes" : "No",
       allergy: activeChild?.allergies || "No",
-      current_illness: activeChild?.currentIllness || "No",
-      medication: activeChild?.currentMedication || "No",
+      current_illness: illnessVal,
+      medication: medVal,
       notes: `Clinical evaluation for milestone ${vaccine.milestone || ""} (${vaccine.vaccineName || ""})`
     };
 
@@ -100,15 +119,19 @@ export default function VaccineDetailView({ vaccine: initialVaccine, onBack, onP
     vaccine?.id,
     vaccine?.vaccineName,
     vaccine?.targetAgeMonths,
+    vaccine?.dueDate,
     activeChild?.id,
     activeChild?.name,
+    activeChild?.birthDate,
     activeChild?.ageMonths,
     activeChild?.sex,
     activeChild?.allergies,
     activeChild?.currentIllness,
     activeChild?.currentMedication,
     schedule,
-    currentIndex
+    currentIndex,
+    isFirstVaccine,
+    isBcg2
   ]);
 
   useEffect(() => {
@@ -264,6 +287,33 @@ export default function VaccineDetailView({ vaccine: initialVaccine, onBack, onP
 
     setShowLogReactionsModal(false);
     await handleSaveStatus("completed", vaccine.dateCompleted || todayStr, reactionPayload);
+  };
+
+  const handleOpenDoctorDateModal = () => {
+    const existing = vaccine?.customScheduledDate || vaccine?.reaction?.scheduledDate || "";
+    setDoctorDateInput(existing || vaccine?.dueDate || "");
+    setShowDoctorDateModal(true);
+  };
+
+  const handleSaveDoctorScheduledDate = async (e) => {
+    if (e) e.preventDefault();
+    if (!doctorDateInput) return;
+    setSavingDoctorDate(true);
+    try {
+      const updatedReaction = {
+        ...(vaccine?.reaction || {}),
+        scheduledDate: doctorDateInput
+      };
+      await handleSaveStatus(vaccine.status || "due", vaccine.dateCompleted || null, updatedReaction);
+      if (fetchModelPrediction) {
+        await fetchModelPrediction();
+      }
+      setShowDoctorDateModal(false);
+    } catch (err) {
+      console.error("Failed to save doctor scheduled date:", err);
+    } finally {
+      setSavingDoctorDate(false);
+    }
   };
 
   return (
@@ -434,9 +484,11 @@ export default function VaccineDetailView({ vaccine: initialVaccine, onBack, onP
         {/* TAB 1: Clinical Overview AND Diseases & Coverage Combined Together */}
         <VaccineOverviewTab
           vaccine={vaccine}
+          activeChild={activeChild}
           isCompleted={isCompleted}
           recordedReaction={recordedReaction}
           handleOpenLogReactions={handleOpenLogReactions}
+          onOpenDoctorDateModal={handleOpenDoctorDateModal}
         />
 
         {/* TAB 2: Model Adverse Reaction Predictions & Comfort Care */}
@@ -479,6 +531,18 @@ export default function VaccineDetailView({ vaccine: initialVaccine, onBack, onP
         setOtherDesc={setLogOtherDesc}
         onSubmit={handleLogReactionsSubmit}
         updating={updating}
+      />
+
+      {/* POPUP 3: Add / Update Doctor or Caregiver Scheduled Date */}
+      <DoctorScheduledDateModal
+        open={showDoctorDateModal}
+        onOpenChange={setShowDoctorDateModal}
+        vaccine={vaccine}
+        scheduledDate={doctorDateInput}
+        setScheduledDate={setDoctorDateInput}
+        birthDate={activeChild?.birthDate}
+        onSubmit={handleSaveDoctorScheduledDate}
+        saving={savingDoctorDate}
       />
     </div>
   );

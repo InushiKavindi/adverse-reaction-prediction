@@ -189,6 +189,13 @@ def update_vaccine_status(
             if not dob:
                 dob = datetime.now(timezone.utc).date()
             due_date = add_months_to_date(dob, target_vax["targetAgeMonths"])
+            existing_rec = (getattr(child, "vaccine_records", {}) or {}).get(vax_id, {})
+            custom_date = (update_in.reaction or {}).get("scheduledDate") or existing_rec.get("dueDate") or (existing_rec.get("reaction") or {}).get("scheduledDate")
+            if custom_date:
+                try:
+                    due_date = datetime.strptime(custom_date.strip(), "%Y-%m-%d").date()
+                except Exception:
+                    pass
             today = datetime.now(timezone.utc).date()
             if due_date > today:
                 raise HTTPException(

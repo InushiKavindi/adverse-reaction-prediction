@@ -111,6 +111,8 @@ class MongoChildRepository(IChildRepository):
         }
         if reaction is not None:
             update_doc[f"{key}.reaction"] = reaction
+            if "scheduledDate" in reaction:
+                update_doc[f"{key}.dueDate"] = reaction["scheduledDate"]
         self.collection.update_one({"id": child_id}, {"$set": update_doc})
         return self.get_by_id(child_id)
 

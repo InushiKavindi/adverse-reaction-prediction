@@ -33,12 +33,13 @@ class SQLAlchemyChildRepository(IChildRepository):
         if not child:
             return None
         records = dict(child.vaccine_records or {})
-        rec = {
-            "status": status,
-            "dateCompleted": date_completed
-        }
+        rec = dict(records.get(vax_id) or {})
+        rec["status"] = status
+        rec["dateCompleted"] = date_completed
         if reaction is not None:
             rec["reaction"] = reaction
+            if "scheduledDate" in reaction:
+                rec["dueDate"] = reaction["scheduledDate"]
         records[vax_id] = rec
         child.vaccine_records = records
         child.updated_at = datetime.now(timezone.utc)

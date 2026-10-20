@@ -1,39 +1,137 @@
 import React from "react";
-import { Calendar, Syringe, ShieldCheck, Activity } from "lucide-react";
+import { Calendar, Syringe, ShieldCheck, Activity, Clock, CheckCircle2, Plus } from "lucide-react";
 import { Card, CardTitle, CardDescription } from "../ui/card";
+import { Button } from "../ui/button";
 import { TabsContent } from "../ui/tabs";
-import { formatDisplayDate } from "./vaccineUtils";
+import { formatDisplayDate, calculateScheduledDateFromDob } from "./vaccineUtils";
 
 export default function VaccineOverviewTab({
   vaccine,
+  activeChild,
   isCompleted,
   recordedReaction,
-  handleOpenLogReactions
+  handleOpenLogReactions,
+  onOpenDoctorDateModal
 }) {
+  const isBcg2 = vaccine?.id === "vax-bcg2" || vaccine?.vaccineName?.toLowerCase().includes("bcg 2") || vaccine?.vaccineName?.toLowerCase().includes("bcg2");
+  const isFirstVaccine = !isBcg2 && (vaccine?.id === "vax-1" || (vaccine?.vaccineName?.toLowerCase().includes("bcg") && !vaccine?.vaccineName?.toLowerCase().includes("bcg 2") && !vaccine?.vaccineName?.toLowerCase().includes("bcg2")));
+  const customDate = vaccine?.customScheduledDate || vaccine?.reaction?.scheduledDate || null;
+  const hasCustomDate = Boolean(customDate);
+
   return (
     <TabsContent value="overview" className="space-y-3.5 pt-1">
-      {/* Clinical Administration Specs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Card className="p-4 bg-white border-slate-100 rounded-2xl shadow-xs">
-          <div className="flex items-center gap-2 text-slate-400 text-xs font-bold mb-1">
-            <Calendar className="w-3.5 h-3.5 text-sky-500 shrink-0" />
-            <span>{isCompleted ? "Administered Date" : "Scheduled Date"}</span>
+      {/* Vaccination Schedule & Administration Dates */}
+      <Card className="p-4 sm:p-5 bg-white border-slate-100 rounded-2xl shadow-xs space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2.5 border-b border-slate-100">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 text-white flex items-center justify-center font-bold shadow-xs shrink-0">
+              <Calendar className="w-4 h-4" />
+            </div>
+            <div>
+              <CardTitle className="text-sm sm:text-base font-bold text-slate-900">
+                Vaccination Schedule & Administration Dates
+              </CardTitle>
+              <CardDescription className="text-[11px] text-slate-400">
+                {isBcg2
+                  ? "Doctor recommended revaccination date and milestone completion record"
+                  : "Official milestone timeline, clinic scheduled date, and completion record"}
+              </CardDescription>
+            </div>
           </div>
-          <p className="text-sm font-extrabold text-slate-800">
-            {formatDisplayDate(isCompleted ? (vaccine.dateCompleted || vaccine.dueDate) : vaccine.dueDate)}
-          </p>
-          <p className="text-[11px] text-slate-400 mt-0.5">Calculated from child's DOB</p>
-        </Card>
 
-        <Card className="p-4 bg-white border-slate-100 rounded-2xl shadow-xs">
-          <div className="flex items-center gap-2 text-slate-400 text-xs font-bold mb-1">
-            <Syringe className="w-3.5 h-3.5 text-pink-500 shrink-0" />
-            <span>Route & Administration Site</span>
+          {!isFirstVaccine && onOpenDoctorDateModal && (
+            <Button
+              type="button"
+              onClick={onOpenDoctorDateModal}
+              className="bg-[#ff2d78] hover:bg-[#e02468] text-white text-xs font-bold px-3.5 py-2 rounded-xl transition shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0 self-start sm:self-auto active:scale-95"
+            >
+              {hasCustomDate ? (
+                <Calendar className="w-3.5 h-3.5" />
+              ) : (
+                <Plus className="w-3.5 h-3.5" />
+              )}
+              <span>{hasCustomDate ? "Update Date" : "Add Date"}</span>
+            </Button>
+          )}
+        </div>
+
+        {/* The 3 Date Columns / Cards */}
+        <div className={`grid grid-cols-1 ${isBcg2 ? "sm:grid-cols-2" : isFirstVaccine ? "sm:grid-cols-2" : "sm:grid-cols-3"} gap-3 pt-0.5`}>
+          {/* 1. Scheduled Date (from DOB) - EXPLICITLY HIDDEN FOR BCG2 */}
+          {!isBcg2 && (
+            <div className="p-3.5 bg-slate-50/80 border border-slate-200/70 rounded-2xl space-y-1">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                <Clock className="w-3 h-3 text-sky-500" />
+                Scheduled Date (from DOB)
+              </span>
+              <p className="text-sm font-extrabold text-slate-800">
+                {isFirstVaccine
+                  ? formatDisplayDate(vaccine.scheduledDateDob || activeChild?.birthDate || vaccine.dueDate) || "At Birth (<24 hrs)"
+                  : formatDisplayDate(vaccine.scheduledDateDob || calculateScheduledDateFromDob(activeChild?.birthDate, vaccine.targetAgeMonths)) || "Calculated from DOB"}
+              </p>
+              <p className="text-[10px] text-slate-400">
+                {isFirstVaccine ? "Standard neonatal birth schedule" : "Calculated from child's birth date"}
+              </p>
+            </div>
+          )}
+
+          {/* 2. Clinic Date (or Doctor's Recommended Date for BCG2) - NOT SHOWN FOR BCG1 */}
+          {!isFirstVaccine && (
+            <div className={`p-3.5 rounded-2xl border space-y-1 ${
+              hasCustomDate
+                ? "bg-sky-50/70 border-sky-200/80"
+                : "bg-slate-50/80 border-slate-200/70"
+            }`}>
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-[10px] font-bold text-sky-700 uppercase tracking-wider flex items-center gap-1.5">
+                  <Calendar className="w-3 h-3 text-sky-600" />
+                  {isBcg2 ? "Doctor's Recommended Date" : "Clinic Date"}
+                </span>
+              </div>
+              <p className={`text-sm font-extrabold ${hasCustomDate ? "text-sky-950" : "text-slate-400 italic"}`}>
+                {hasCustomDate ? formatDisplayDate(customDate) : "Not added yet"}
+              </p>
+              <p className="text-[10px] text-slate-500">
+                {hasCustomDate
+                  ? (isBcg2 ? "Doctor recommended revaccination appointment" : "Scheduled clinic appointment date")
+                  : "Click 'Add Date' to set appointment"}
+              </p>
+            </div>
+          )}
+
+          {/* 3. Completed Date */}
+          <div className={`p-3.5 rounded-2xl border space-y-1 ${
+            isCompleted
+              ? "bg-emerald-50/70 border-emerald-200/80"
+              : "bg-slate-50/80 border-slate-200/70"
+          }`}>
+            <span className={`text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 ${
+              isCompleted ? "text-emerald-700" : "text-slate-400"
+            }`}>
+              <CheckCircle2 className={`w-3 h-3 ${isCompleted ? "text-emerald-600" : "text-slate-400"}`} />
+              Completed Date
+            </span>
+            <p className={`text-sm font-extrabold ${isCompleted ? "text-emerald-950" : "text-slate-400 italic"}`}>
+              {isCompleted
+                ? formatDisplayDate(vaccine.dateCompleted || vaccine.dueDate)
+                : "Not completed yet"}
+            </p>
+            <p className="text-[10px] text-slate-400">
+              {isCompleted ? "Verified administered" : "Awaiting milestone completion"}
+            </p>
           </div>
-          <p className="text-sm font-extrabold text-slate-800">{vaccine.route}</p>
-          <p className="text-[11px] text-slate-400 mt-0.5">{vaccine.fullRoute || "Pediatric immunization protocol"}</p>
-        </Card>
-      </div>
+        </div>
+      </Card>
+
+      {/* Route & Administration Site */}
+      <Card className="p-4 bg-white border-slate-100 rounded-2xl shadow-xs">
+        <div className="flex items-center gap-2 text-slate-400 text-xs font-bold mb-1">
+          <Syringe className="w-3.5 h-3.5 text-pink-500 shrink-0" />
+          <span>Route & Administration Site</span>
+        </div>
+        <p className="text-sm font-extrabold text-slate-800">{vaccine.route}</p>
+        <p className="text-[11px] text-slate-400 mt-0.5">{vaccine.fullRoute || "Pediatric immunization protocol"}</p>
+      </Card>
 
       {/* Diseases Prevented & Coverage Strip */}
       <Card className="bg-white border-slate-100 rounded-2xl p-4 sm:p-5 shadow-xs space-y-2.5">

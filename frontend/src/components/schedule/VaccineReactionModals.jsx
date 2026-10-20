@@ -1,7 +1,8 @@
 import React from "react";
-import { ArrowLeft, User, Clock, Check } from "lucide-react";
+import { ArrowLeft, User, Clock, Check, Calendar } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "../ui/dialog";
 import { Button } from "../ui/button";
+import { calculateAgeMonthsAtDate } from "./vaccineUtils";
 
 export const SYMPTOM_OPTIONS = [
   { id: "no_reaction", label: "No Reaction", emoji: "😊", isNoReaction: true },
@@ -229,3 +230,104 @@ export function LogReactionsModal({
     </Dialog>
   );
 }
+
+export function DoctorScheduledDateModal({
+  open,
+  onOpenChange,
+  vaccine,
+  scheduledDate,
+  setScheduledDate,
+  birthDate,
+  onSubmit,
+  saving
+}) {
+  const isBcg2 = vaccine?.id === "vax-bcg2" || vaccine?.vaccineName?.toLowerCase().includes("bcg 2") || vaccine?.vaccineName?.toLowerCase().includes("bcg2");
+  const hasCustomDate = Boolean(vaccine?.customScheduledDate || vaccine?.reaction?.scheduledDate);
+  const ageMonths = calculateAgeMonthsAtDate(birthDate, scheduledDate);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md w-full p-5 sm:p-6 rounded-3xl">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => onOpenChange(false)}
+              className="p-1 rounded-full text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition cursor-pointer"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <DialogTitle className="text-base font-bold text-slate-900">
+              {isBcg2
+                ? (hasCustomDate ? "Update Doctor's Recommended Date" : "Add Doctor's Recommended Date")
+                : (hasCustomDate ? "Update Clinic Date" : "Add Clinic Date")}
+            </DialogTitle>
+          </div>
+          <div className="w-8 h-8 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center font-bold text-xs shrink-0">
+            <Calendar className="w-4 h-4" />
+          </div>
+        </div>
+
+        <form onSubmit={onSubmit} className="space-y-4 pt-1">
+          <div>
+            <h3 className="text-sm font-extrabold text-slate-900 leading-snug">
+              {isBcg2
+                ? "When did the doctor recommend BCG revaccination?"
+                : `When is the clinic appointment scheduled for ${vaccine?.vaccineName || "this vaccine"}?`}
+            </h3>
+            <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+              {isBcg2
+                ? "If your baby's BCG scar did not develop after 6–12 weeks, pediatricians normally schedule a 2nd dose within 2 to 6 months of age."
+                : "Enter the scheduled clinic appointment date advised by your healthcare clinic for this immunization milestone."}
+            </p>
+          </div>
+
+          <div className="bg-slate-50/80 border border-slate-200/70 rounded-2xl p-4 space-y-3">
+            <div className="space-y-1.5">
+              <label htmlFor="doctor-scheduled-date-input" className="text-xs font-bold text-slate-800 block">
+                {isBcg2 ? "Doctor's Recommended Date" : "Clinic Appointment Date"}
+              </label>
+              <input
+                id="doctor-scheduled-date-input"
+                type="date"
+                required
+                value={scheduledDate}
+                onChange={(e) => setScheduledDate(e.target.value)}
+                className="w-full px-3.5 py-2 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none transition text-slate-800 font-medium"
+              />
+            </div>
+
+            {scheduledDate && (
+              <div className="p-3 bg-sky-50/70 border border-sky-100 rounded-xl flex items-center justify-between text-xs">
+                <span className="text-slate-600 font-medium">Estimated Infant Age:</span>
+                <span className="font-extrabold text-sky-800">
+                  ~{ageMonths} months ({Math.round(ageMonths * 4.3)} weeks)
+                </span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              className="text-xs font-bold rounded-xl border-slate-200 text-slate-600 hover:bg-slate-100 cursor-pointer"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={saving || !scheduledDate}
+              className="bg-[#ff2d78] hover:bg-[#e02468] text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer"
+            >
+              {saving ? "Saving..." : hasCustomDate ? "Update Date" : "Add Date"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export const Bcg2ScheduledDateModal = DoctorScheduledDateModal;

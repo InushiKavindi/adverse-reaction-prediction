@@ -22,6 +22,39 @@ export function mapVaccineToModelType(vaccine) {
   return "JE";
 }
 
+export function calculateAgeMonthsAtDate(birthDateStr, targetDateStr) {
+  if (!birthDateStr || !targetDateStr) return 2.0;
+  try {
+    const dob = new Date(birthDateStr);
+    const target = new Date(targetDateStr);
+    if (isNaN(dob.getTime()) || isNaN(target.getTime())) return 2.0;
+    const diffDays = Math.max(0, (target - dob) / (1000 * 60 * 60 * 24));
+    const approximateMonths = Math.round((diffDays / 30.4375) * 10) / 10;
+    return Math.max(1.0, approximateMonths);
+  } catch {
+    return 2.0;
+  }
+}
+
+export function calculateScheduledDateFromDob(birthDateStr, targetAgeMonths = 0) {
+  if (!birthDateStr) return "";
+  try {
+    const dob = new Date(birthDateStr);
+    if (isNaN(dob.getTime())) return "";
+    const months = Number(targetAgeMonths) || 0;
+    const year = dob.getFullYear() + Math.floor((dob.getMonth() + months) / 12);
+    const month = (dob.getMonth() + months) % 12;
+    const day = dob.getDate();
+    const result = new Date(year, month, day);
+    const yyyy = result.getFullYear();
+    const mm = String(result.getMonth() + 1).padStart(2, "0");
+    const dd = String(result.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  } catch {
+    return "";
+  }
+}
+
 export function formatDisplayDate(dateStr) {
   if (!dateStr) return "";
   try {

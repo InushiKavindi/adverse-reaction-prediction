@@ -75,6 +75,8 @@ class VaccineScheduleItem(BaseModel):
     diseases: str
     status: str  # "completed" | "due" | "upcoming"
     dueDate: str
+    scheduledDateDob: Optional[str] = None
+    customScheduledDate: Optional[str] = None
     dateCompleted: Optional[str] = None
     expectedReactions: str
     severityLevel: str
