@@ -32,31 +32,10 @@ export default function HeroBanner({ onViewSchedule, onViewHistory }) {
         </h2>
 
         {/* Subtitle with highlighted child name */}
-        <p className="text-sm sm:text-base text-slate-600 leading-relaxed mb-6 font-normal">
+        <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-normal">
           Monitor immunization milestones, track post-vaccination wellness, and manage{" "}
           <span className="font-bold text-pink-600">{childName}'s</span> pediatric health journey.
         </p>
-
-        {/* CTA Action Buttons */}
-        <div className="flex flex-wrap items-center gap-3">
-          <Button
-            onClick={onViewSchedule}
-            className="h-auto px-5 py-2.5 bg-[#0793E8] hover:bg-[#0682cf] text-white font-bold text-sm rounded-full shadow-md shadow-sky-200 hover:shadow-lg hover:shadow-sky-300 transition-all flex items-center gap-2 cursor-pointer active:scale-95"
-          >
-            <Calendar className="w-4 h-4" />
-            <span>Assess Vaccine Schedule</span>
-          </Button>
-
-          {onViewHistory && (
-            <Button
-              variant="outline"
-              onClick={onViewHistory}
-              className="h-auto px-5 py-2.5 bg-white hover:bg-pink-50 border-pink-300 text-pink-600 hover:text-pink-700 font-bold text-sm rounded-full shadow-xs hover:border-pink-400 transition-all flex items-center gap-2 cursor-pointer active:scale-95"
-            >
-              <span>Prediction History</span>
-            </Button>
-          )}
-        </div>
       </div>
     </Card>
   );

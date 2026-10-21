@@ -543,46 +543,6 @@ export default function PredictionHistory({ onNewScreening }) {
                       No adverse reactions predicted. Patient is likely to tolerate well.
                     </div>
                   )}
-
-                  {/* Confirmed Logged Post-Vaccine Reaction */}
-                  {card.loggedReaction && (
-                    <div
-                      className={`p-2.5 rounded-2xl text-xs border ${
-                        card.loggedReaction.hasReaction || card.loggedReaction.bcgScarStatus === "absent"
-                          ? "bg-amber-50/90 border-amber-200 text-amber-950"
-                          : "bg-emerald-50/90 border-emerald-200 text-emerald-950"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-bold flex items-center gap-1 text-[11px]">
-                          <HeartPulse className="w-3.5 h-3.5 text-pink-600" />
-                          Logged Reaction Record:
-                        </span>
-                        <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                            card.loggedReaction.hasReaction || card.loggedReaction.bcgScarStatus === "absent"
-                              ? "bg-amber-200 text-amber-900"
-                              : "bg-emerald-200 text-emerald-900"
-                          }`}
-                        >
-                          {card.loggedReaction.statusText}
-                        </span>
-                      </div>
-                      <p className="text-[11px] leading-relaxed text-slate-700">
-                        {card.loggedReaction.summary}
-                      </p>
-                    </div>
-                  )}
-
-                  {!card.loggedReaction && (
-                    <div className="p-2 bg-slate-50 border border-slate-100 rounded-xl text-[11px] text-slate-500 flex items-center justify-between">
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-slate-400" />
-                        Status: {card.status === "due" ? "Due now" : "Upcoming milestone"}
-                      </span>
-                      <span>Scheduled: {card.dueDate}</span>
-                    </div>
-                  )}
                 </div>
 
                 {/* Footer details row */}
@@ -741,13 +701,25 @@ export default function PredictionHistory({ onNewScreening }) {
 
             {/* Logged Post-Vaccination Record */}
             {selectedRecord.loggedReaction && (
-              <div className="p-3.5 bg-pink-50/70 border border-pink-200 rounded-2xl space-y-1.5 text-xs">
+              <div
+                className={`p-3.5 rounded-2xl space-y-2 text-xs border ${
+                  selectedRecord.loggedReaction.hasReaction || selectedRecord.loggedReaction.bcgScarStatus === "absent"
+                    ? "bg-amber-50/90 border-amber-200 text-amber-950"
+                    : "bg-emerald-50/90 border-emerald-200 text-emerald-950"
+                }`}
+              >
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-pink-900 flex items-center gap-1.5">
+                  <span className="font-bold flex items-center gap-1.5 text-xs">
                     <HeartPulse className="w-3.5 h-3.5 text-pink-600" />
-                    Logged Post-Vaccine Record:
+                    Logged Reaction Record:
                   </span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-100 text-pink-800">
+                  <span
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      selectedRecord.loggedReaction.hasReaction || selectedRecord.loggedReaction.bcgScarStatus === "absent"
+                        ? "bg-amber-200 text-amber-900"
+                        : "bg-emerald-200 text-emerald-900"
+                    }`}
+                  >
                     {selectedRecord.loggedReaction.statusText}
                   </span>
                 </div>
@@ -756,10 +728,14 @@ export default function PredictionHistory({ onNewScreening }) {
                   {selectedRecord.loggedReaction.summary}
                 </p>
 
-                <div className="text-[10px] text-slate-500 pt-1 border-t border-pink-100 flex gap-4">
+                <div className="text-[10px] text-slate-500 pt-1 border-t border-slate-200/60 flex flex-wrap gap-4">
                   <span>Given Date: {selectedRecord.dateCompleted || "Completed"}</span>
-                  <span>Illness: {selectedRecord.loggedReaction.currentIllness || "None"}</span>
-                  <span>Medication: {selectedRecord.loggedReaction.currentMedication || "None"}</span>
+                  {selectedRecord.loggedReaction.currentIllness && (
+                    <span>Illness: {selectedRecord.loggedReaction.currentIllness}</span>
+                  )}
+                  {selectedRecord.loggedReaction.currentMedication && (
+                    <span>Medication: {selectedRecord.loggedReaction.currentMedication}</span>
+                  )}
                 </div>
               </div>
             )}
