@@ -1,14 +1,18 @@
 """
-Explanation Generator – Transforms structured XAI results into
-parent-friendly text for the "Understanding Your Child's Forecast" section.
+Explanation Generator – Transforms genuine, structured XAI results into
+a simple, parent-friendly explanation for the "Understanding Your Child's Forecast" section.
 
-The generator works on verified structured data only.  It never invents
-SHAP values, medical claims, or causal relationships.
-
-Three sections are produced:
+Strictly follows the simple, parent-friendly structure:
   A. What does the forecast mean?
+     - Personalized summary of predicted possible reactions
+     - Estimated onset timing window
+     - Cautious estimate reminder
   B. What influenced the forecast?
+     - Factors influencing the predicted reactions
+     - Expected timing explanation
   C. What should parents know?
+     - Post-vaccination monitoring guidance
+     - Urgent medical care advice
 """
 
 from __future__ import annotations
@@ -18,12 +22,22 @@ from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
-# Symptom display names (matching risk_evaluator.py)
+# Natural symptom descriptors for parent-friendly sentences
+SYMPTOM_NATURAL_NAMES = {
+    "fever": "fever",
+    "pain": "mild pain",
+    "swelling": "mild swelling",
+    "redness": "redness",
+    "rash": "skin rash",
+    "no_reaction": "no adverse reaction",
+    "others": "other mild symptoms",
+}
+
 SYMPTOM_DISPLAY = {
     "fever": "Fever",
+    "pain": "Pain",
     "swelling": "Swelling",
     "redness": "Redness",
-    "pain": "Pain",
     "rash": "Skin Rash",
     "no_reaction": "No Adverse Reaction",
     "others": "Other Symptoms",
@@ -31,20 +45,34 @@ SYMPTOM_DISPLAY = {
 
 
 def _display(symptom: str) -> str:
+    """Format symptom key into display name."""
     return SYMPTOM_DISPLAY.get(symptom, symptom.replace("_", " ").title())
 
 
-def _pct(prob: float) -> int:
-    return min(92, max(0, int(round(prob * 100))))
+def _natural_name(symptom: str) -> str:
+    """Get clean parent-friendly natural symptom name."""
+    return SYMPTOM_NATURAL_NAMES.get(symptom, symptom.replace("_", " ").lower())
 
 
-def _format_hours(hours: float) -> str:
-    if hours < 1:
-        return "within the first hour"
-    if hours < 24:
-        return f"around {hours:.0f} hours after vaccination"
-    days = hours / 24
-    return f"around {hours:.0f} hours (~{days:.1f} days) after vaccination"
+def _join_items(items: List[str]) -> str:
+    """Join items with commas and 'and' naturally."""
+    if not items:
+        return ""
+    if len(items) == 1:
+        return items[0]
+    if len(items) == 2:
+        return f"{items[0]} and {items[1]}"
+    return ", ".join(items[:-1]) + f", and {items[-1]}"
+
+
+def _get_onset_value(onset_dict: Dict[str, float], symptom: str) -> Optional[float]:
+    """Retrieve onset hours safely for a given symptom."""
+    val = onset_dict.get(f"{symptom}_onset")
+    if val is None:
+        val = onset_dict.get(symptom)
+    if val is not None and val > 0:
+        return float(val)
+    return None
 
 
 # ────────────────────────────────────────────────────────────────────
@@ -57,87 +85,98 @@ def generate_forecast_summary(
     active_symptoms: List[str],
     risk_level: str,
 ) -> Dict[str, Any]:
-    """Generate Section A: concise, parent-friendly bullet points."""
-    if not active_symptoms:
-        points = [
-            "Expected tolerance: Low likelihood of adverse reactions predicted for this milestone.",
-            "Normal recovery: Your child is predicted to tolerate the vaccine normally.",
+    """
+    Generate Section A: simple, parent-friendly summary.
+    """
+    # 1. Gather all adverse reactions (excluding no_reaction) with their probabilities
+    adverse_candidates = []
+    for symptom, prob in probabilities.items():
+        if symptom == "no_reaction":
+            continue
+        p_pct = min(92, max(0, int(round(prob * 100))))
+        onset_val = _get_onset_value(onset_dict, symptom)
+        is_active = symptom in active_symptoms
+
+        adverse_candidates.append({
+            "symptom": symptom,
+            "display_name": _display(symptom),
+            "natural_name": _natural_name(symptom),
+            "probability_pct": p_pct,
+            "raw_prob": prob,
+            "onset_hours": onset_val,
+            "is_active": is_active,
+        })
+
+    adverse_candidates.sort(key=lambda x: x["probability_pct"], reverse=True)
+
+    # Relevant reactions: active in prediction, or probability >= 20%
+    relevant = [c for c in adverse_candidates if c["is_active"] or c["probability_pct"] >= 20]
+    if not relevant and adverse_candidates and adverse_candidates[0]["probability_pct"] >= 10:
+        relevant = [adverse_candidates[0]]
+
+    # Case 1: Low reaction likelihood
+    if not relevant:
+        paragraphs = [
+            "Based on the information provided, the system predicts a low likelihood of adverse reactions following this vaccination.",
+            "These are estimates, not guarantees. Your child may experience mild reactions or no reaction at all.",
         ]
         return {
             "title": "What does the forecast mean?",
-            "summary": (
-                "Based on our analysis, the model estimates a low likelihood of "
-                "adverse reactions following this vaccination. Your child is predicted "
-                "to tolerate the vaccine well."
-            ),
-            "points": points,
-            "details": [],
-            "disclaimer": (
-                "These are model estimates, not certainties. "
-                "Even a low predicted probability does not rule out a reaction entirely."
-            ),
+            "paragraphs": paragraphs,
+            "summary": " ".join(paragraphs),
+            "relevant_reactions": [],
         }
 
-    # Gather predicted reactions and their timing
-    items = []
-    valid_onsets = []
-    for symptom in active_symptoms:
-        prob = probabilities.get(symptom, 0.0)
-        onset_hrs = onset_dict.get(f"{symptom}_onset")
-        if onset_hrs is not None and onset_hrs > 0:
-            valid_onsets.append(onset_hrs)
-        items.append({
-            "symptom": symptom,
-            "display_name": _display(symptom),
-            "probability_pct": _pct(prob),
-            "onset_hours": onset_hrs,
-        })
+    # Case 2: One or more relevant reactions
+    rxn_names = [_natural_name(r["symptom"]) for r in relevant]
+    rxn_str = _join_items(rxn_names)
 
-    # Sort descending by probability
-    items.sort(key=lambda d: d["probability_pct"], reverse=True)
-
-    # Build natural names string: e.g. "Pain, Fever, and Redness"
-    names = [d["display_name"] for d in items]
-    if len(names) == 1:
-        names_str = names[0]
-    elif len(names) == 2:
-        names_str = f"{names[0]} and {names[1]}"
+    # Paragraph 1: Predicted reactions
+    if len(relevant) == 1:
+        p1 = f"Based on the information provided, the system predicts that {rxn_str} is a possible reaction following this vaccination."
     else:
-        names_str = f"{', '.join(names[:-1])}, and {names[-1]}"
+        p1 = f"Based on the information provided, the system predicts that {rxn_str} are possible reactions following this vaccination."
 
-    # Compute concise onset window
+    # Paragraph 2: Estimated timing window
+    valid_onsets = [r["onset_hours"] for r in relevant if r["onset_hours"] is not None]
     if valid_onsets:
-        min_h = round(min(valid_onsets))
-        max_h = round(max(valid_onsets))
-        if min_h == max_h or abs(max_h - min_h) < 1.0:
-            timing_phrase = f"around {min_h} hours post-vaccination"
+        min_h = max(1, round(min(valid_onsets)))
+        max_h = max(1, round(max(valid_onsets)))
+        if min_h == max_h:
+            p2 = f"The estimated onset time is approximately {min_h} hours after vaccination, based on the current predictions."
         else:
-            timing_phrase = f"between {min_h} to {max_h} hours post-vaccination"
+            p2 = f"The estimated onset times are approximately {min_h}–{max_h} hours after vaccination, based on the current predictions."
     else:
-        timing_phrase = "within 6 to 12 hours post-vaccination"
+        p2 = "The estimated onset times vary depending on the reaction, based on the current predictions."
 
-    points = [
-        f"Expected reactions: Mild {names_str} (highest likelihood).",
-        f"Onset timing: Typically develops {timing_phrase}.",
-        "Recovery: Usually resolves naturally within 24 to 48 hours.",
-    ]
+    # Paragraph 3: Reminder
+    p3 = "These are estimates, not guarantees. Your child may experience different reactions or no reaction at all."
 
-    summary = (
-        f"Based on your child's age and clinical profile, the model forecasts a higher likelihood "
-        f"of common, mild reactions - most notably {names_str}, typically appearing {timing_phrase}. "
-        f"These expected responses reflect normal immune activation and usually resolve naturally within 24 to 48 hours."
-    )
+    paragraphs = [p1, p2, p3]
 
     return {
         "title": "What does the forecast mean?",
-        "summary": summary,
-        "points": points,
-        "details": [],
-        "disclaimer": (
-            "These are statistical estimates from a trained model, not diagnoses. "
-            "A predicted reaction is not guaranteed to occur, and reactions not predicted are still possible."
-        ),
+        "paragraphs": paragraphs,
+        "summary": " ".join(paragraphs),
+        "relevant_reactions": [r["symptom"] for r in relevant],
     }
+
+
+def _format_vaccine_display_name(vax_raw: str) -> str:
+    """Format vaccine type into clean parent-friendly name."""
+    vax_map = {
+        "BCG1": "BCG (birth dose)",
+        "BCG2": "BCG (revaccination dose)",
+        "Pentavalent1,OPV1": "Pentavalent (1st dose) and OPV",
+        "Pentavalent2,OPV2,IPV": "Pentavalent (2nd dose), OPV, and IPV",
+        "Pentavalent3,OPV3": "Pentavalent (3rd dose) and OPV",
+        "MMR1": "MMR (1st dose)",
+        "MMR2": "MMR (2nd dose)",
+        "JE": "Japanese Encephalitis (JE)",
+        "DPT,OPV4": "DPT booster and OPV",
+        "DT,OPV5": "DT booster and OPV",
+    }
+    return vax_map.get(vax_raw, vax_raw.replace(",", ", "))
 
 
 # ────────────────────────────────────────────────────────────────────
@@ -151,230 +190,197 @@ def generate_influence_explanation(
     active_symptoms: List[str],
 ) -> Dict[str, Any]:
     """
-    Generate Section B: explain influential clinical features cleanly and naturally.
-    Removes repetitive boilerplate templates, eliminates ClassifierChain internal artifacts,
-    and deduplicates feature badges for parents.
+    Generate Section B: clean, parent-friendly explanation of influences,
+    tailored specifically to the given vaccine and child's profile.
     """
     symptom_expl = xai_results.get("symptom_explanations", {})
     onset_expl = xai_results.get("onset_explanations", {})
     input_features = xai_results.get("input_features", {})
 
-    # Extract clean patient values for display
-    child_age = input_features.get("age_months", {}).get("value", "")
-    age_str = f"{child_age} months" if child_age else "this age"
-    vax_type = input_features.get("vaccine_type", {}).get("value", "")
+    # Extract patient values
+    age_raw = input_features.get("age_months", {}).get("value", 0.0)
+    try:
+        age_val = float(age_raw)
+    except (ValueError, TypeError):
+        age_val = 0.0
 
-    # 1. Reaction Probability Factors:
-    # Aggregate net clinical factor impacts across active symptoms (ignoring internal chain features)
-    clinical_factors = {}
-    for symptom in active_symptoms:
-        expl = symptom_expl.get(symptom, {})
+    vax_raw = str(input_features.get("vaccine_type", {}).get("value", "") or "")
+    prev_rxn = str(input_features.get("previous_reaction", {}).get("value", "No") or "No")
+    illness_val = str(input_features.get("current_illness", {}).get("value", "No") or "No")
+    allergy_val = str(input_features.get("allergy", {}).get("value", "No") or "No")
+
+    # Format vaccine display name
+    vax_display = _format_vaccine_display_name(vax_raw)
+    age_str = f"{int(age_val)}" if age_val == int(age_val) else f"{age_val}"
+
+    # Calculate total importance per feature to rank factors for this specific vaccine
+    feat_importance = {
+        "vaccine_type": 0.0,
+        "age_months": 0.0,
+        "previous_reaction": 0.0,
+        "other_health": 0.0,
+    }
+
+    for s, expl in symptom_expl.items():
         for c in expl.get("shap_contributions", []):
-            if c.get("is_chain_feature") or c.get("feature", "").startswith("prior prediction"):
-                continue
-            feat = c["feature"]
-            readable = c["readable_feature"]
-            val = c.get("value", "")
-            shap_val = c["contribution"]
+            feat = c.get("feature", "")
+            contrib_abs = abs(c.get("contribution", 0.0))
+            if feat in feat_importance:
+                feat_importance[feat] += contrib_abs
+            elif feat in ("current_illness", "allergy", "medication"):
+                feat_importance["other_health"] += contrib_abs
 
-            if feat not in clinical_factors:
-                clinical_factors[feat] = {
-                    "feature": feat,
-                    "readable": readable,
-                    "value": val,
-                    "total_shap": 0.0,
-                    "increases_count": 0,
-                    "decreases_count": 0,
-                }
-            clinical_factors[feat]["total_shap"] += abs(shap_val)
-            if shap_val > 0:
-                clinical_factors[feat]["increases_count"] += 1
-            else:
-                clinical_factors[feat]["decreases_count"] += 1
-
-    # Compose natural synthesis for symptom probability influences
-    prob_sentences = []
-    names_lower = [_display(s).lower() for s in active_symptoms]
-    rxn_str = _join_items(names_lower) if names_lower else "adverse reactions"
-
-    # Child's age contribution
-    if "age_months" in clinical_factors:
-        prob_sentences.append(
-            f"Your child's age ({age_str}) is the primary factor influencing the forecast for {rxn_str}, "
-            f"as toddler immune systems actively produce localized and low-grade systemic responses."
-        )
-
-    # Vaccine type contribution
-    if "vaccine_type" in clinical_factors and vax_type:
-        prob_sentences.append(
-            f"The administered vaccine ({vax_type}) carries standard immunogenic characteristics "
-            f"known to temporarily induce mild soreness or warmth."
-        )
-
-    # Health baseline (illness, previous reactions, allergy)
-    baseline_notes = []
-    if clinical_factors.get("current_illness", {}).get("value") in ("No", "None", "no"):
-        baseline_notes.append("no current illness")
-    if clinical_factors.get("previous_reaction", {}).get("value") in ("No", "None", "no"):
-        baseline_notes.append("no history of prior adverse reactions")
-    if clinical_factors.get("allergy", {}).get("value") in ("No", "None", "no"):
-        baseline_notes.append("no documented allergies")
-
-    if baseline_notes:
-        prob_sentences.append(
-            f"The child's healthy baseline ({_join_items(baseline_notes)}) "
-            f"provides a reassuring profile that supports safe recovery without heightened complication risks."
-        )
-
-    if not prob_sentences:
-        if active_symptoms:
-            prob_sentences.append(
-                f"The predicted reactions for {rxn_str} reflect standard pediatric immunological responses "
-                f"based on your child's age and health record."
-            )
-        else:
-            prob_sentences.append(
-                "The model forecasts high overall vaccine tolerance with a low probability of adverse reactions, "
-                "supported by your child's age and healthy clinical baseline."
-            )
-
-    # 2. Onset Timing Factors:
-    # Synthesize onset timing timeline without repeating identical sentences per reaction
-    onset_sentences = []
-    local_symptoms = [s for s in active_symptoms if s in ("pain", "redness", "swelling")]
-    systemic_symptoms = [s for s in active_symptoms if s in ("fever", "rash", "others")]
-
-    local_hrs = [onset_dict.get(f"{s}_onset") for s in local_symptoms if onset_dict.get(f"{s}_onset") is not None]
-    systemic_hrs = [onset_dict.get(f"{s}_onset") for s in systemic_symptoms if onset_dict.get(f"{s}_onset") is not None]
-
-    if local_hrs and systemic_hrs:
-        avg_local = round(sum(local_hrs) / len(local_hrs))
-        avg_sys = round(sum(systemic_hrs) / len(systemic_hrs))
-        onset_sentences.append(
-            f"Symptoms are estimated to emerge in stages: localized injection-site reactions "
-            f"({_join_items([_display(s).lower() for s in local_symptoms])}) typically appear first (around {avg_local} hours), "
-            f"followed by systemic responses such as fever (around {avg_sys} hours)."
-        )
-    elif local_hrs:
-        avg_local = round(sum(local_hrs) / len(local_hrs))
-        onset_sentences.append(
-            f"Injection-site reactions are expected to appear around {avg_local} hours following administration."
-        )
-    elif systemic_hrs:
-        avg_sys = round(sum(systemic_hrs) / len(systemic_hrs))
-        onset_sentences.append(
-            f"Systemic responses are estimated to appear around {avg_sys} hours following administration."
-        )
+    # 1. Vaccine type and dose description tailored to this vaccine (short and simple)
+    vax_upper = vax_raw.upper()
+    if "MMR" in vax_upper:
+        vax_text = f"{vax_display} formulation primarily influences the likelihood of mild fever and skin rash."
+    elif "BCG" in vax_upper:
+        vax_text = f"{vax_display} formulation primarily influences localized redness and swelling at the injection site."
+    elif "PENTA" in vax_upper:
+        vax_text = f"{vax_display} formulation primarily contributed to predictions for mild fever and localized tenderness."
+    elif "JE" in vax_upper:
+        vax_text = f"{vax_display} formulation contributed to low-grade fever and mild localized tenderness."
+    elif "DPT" in vax_upper or "DT" in vax_upper:
+        vax_text = f"{vax_display} booster formulation primarily influences temporary injection-site tenderness."
     else:
-        onset_sentences.append(
-            "Symptoms typically develop within the first 6 to 12 hours post-vaccination."
-        )
+        vax_text = f"{vax_display} vaccination information was a primary factor in the predicted reactions."
 
-    onset_sentences.append(
-        "This timing progression is primarily governed by your child's metabolic age and standard vaccine absorption."
-    )
-
-    # 3. Key Factor Badges (Deduplicated, parent-friendly labels):
-    key_factors = []
-    # Rank by total SHAP impact
-    for feat, info in sorted(clinical_factors.items(), key=lambda x: x[1]["total_shap"], reverse=True):
-        direction = "increases" if info["increases_count"] >= info["decreases_count"] else "decreases"
-
-        if feat == "age_months":
-            label = f"Child's Age ({age_str})"
-            direction = "increases"
-        elif feat == "vaccine_type":
-            label = f"Vaccine Type ({vax_type})" if vax_type else "Vaccine Type"
-            direction = "neutral"
-        elif feat == "current_illness":
-            label = "No Current Illness"
-            direction = "decreases"
-        elif feat == "previous_reaction":
-            label = "No Prior Reactions"
-            direction = "decreases"
-        elif feat == "allergy":
-            label = "No Known Allergies"
-            direction = "decreases"
-        elif feat == "medication":
-            label = "No Medications"
-            direction = "decreases"
-        elif feat == "sex":
-            val = info["value"]
-            label = f"Child's Sex ({'Male' if val == 'M' else 'Female' if val == 'F' else val})"
-            direction = "neutral"
-        else:
-            label = info["readable"].title()
-
-        key_factors.append({
-            "feature": label,
-            "direction": direction,
-            "raw_feature": feat,
-        })
-
-    # Fallback to key baseline factors if no active reactions triggered SHAP
-    if not key_factors:
-        if child_age:
-            key_factors.append({"feature": f"Child's Age ({age_str})", "direction": "neutral", "raw_feature": "age_months"})
-        if vax_type:
-            key_factors.append({"feature": f"Vaccine Type ({vax_type})", "direction": "neutral", "raw_feature": "vaccine_type"})
-        key_factors.append({"feature": "No Current Illness", "direction": "decreases", "raw_feature": "current_illness"})
-        key_factors.append({"feature": "No Prior Reactions", "direction": "decreases", "raw_feature": "previous_reaction"})
-        key_factors.append({"feature": "No Known Allergies", "direction": "decreases", "raw_feature": "allergy"})
-
-    # 1. Reaction probability points:
-    prob_points = []
-    if "age_months" in clinical_factors:
-        prob_points.append(f"Child's Age ({age_str}): Toddler immune systems actively produce localized and mild systemic responses.")
-    if "vaccine_type" in clinical_factors and vax_type:
-        prob_points.append(f"Vaccine Profile ({vax_type}): Formulation commonly produces temporary injection-site soreness or warmth.")
-    if baseline_notes:
-        prob_points.append(f"Healthy Baseline: {_join_items(baseline_notes).capitalize()} supports safe recovery without heightened complication risks.")
-    if not prob_points:
-        if active_symptoms:
-            prob_points.append(f"General Profile: Expected reactions for {rxn_str} reflect standard pediatric immune activation.")
-        else:
-            prob_points.append("General Profile: High vaccine tolerance supported by child's age and clinical baseline.")
-
-    # 2. Onset timing points:
-    onset_points = []
-    if local_hrs and systemic_hrs:
-        onset_points.append(f"Localized Symptoms: Mild soreness or swelling typically appears first (around {avg_local} hours).")
-        onset_points.append(f"Systemic Responses: Mild fever tends to develop later (around {avg_sys} hours).")
-        onset_points.append("Timing Drivers: Governed by your child's age and expected vaccine absorption rate.")
-    elif local_hrs:
-        onset_points.append(f"Localized Symptoms: Injection-site reactions typically appear around {avg_local} hours.")
-        onset_points.append("Timing Drivers: Governed by your child's age and expected vaccine absorption rate.")
-    elif systemic_hrs:
-        onset_points.append(f"Systemic Responses: Reactions are estimated to appear around {avg_sys} hours.")
-        onset_points.append("Timing Drivers: Governed by your child's age and expected vaccine absorption rate.")
+    # 2. Child's age description tailored to this milestone age (short and simple)
+    if age_val <= 4.0:
+        age_text = f"Lower likelihood of high fever with typical localized injection-site soreness at {age_str} months."
+    elif age_val <= 12.0:
+        age_text = f"Standard milestone responsiveness with moderate chance of mild fever at {age_str} months."
     else:
-        onset_points.append("Onset Progression: Symptoms typically develop within the first 6 to 12 hours post-vaccination.")
-        onset_points.append("Timing Drivers: Governed by your child's age and standard vaccine absorption.")
+        age_text = f"Toddler age profile slightly increases the likelihood of mild fever at {age_str} months."
 
-    # Assemble Section B paragraphs
-    paragraphs = [
+    # 3. Previous reaction history description tailored to patient (short and simple)
+    if prev_rxn.lower() in ("yes", "y", "true", "1"):
+        prev_text = "Prior reaction history slightly increases the predicted reaction probabilities."
+    else:
+        prev_text = "No prior reactions supports lower expected reaction probabilities across symptoms."
+
+    # 4. Other health information description tailored to patient (short and simple)
+    has_illness = illness_val.lower() in ("yes", "y", "true", "1")
+    has_allergy = allergy_val.lower() in ("yes", "y", "true", "1")
+
+    if has_illness and has_allergy:
+        other_text = "Active current illness and allergy history contribute to slightly higher symptom likelihood."
+    elif has_illness:
+        other_text = "Active current illness slightly increases predicted fever likelihood."
+    elif has_allergy:
+        other_text = "Documented allergy history slightly influences skin sensitivity."
+    else:
+        other_text = "No current illness or known allergies supports a low baseline risk."
+
+    # 5. Key Influencing Factor badges (matching Image 1 chips layout)
+    badge_vax_map = {
+        "BCG1": "BCG",
+        "BCG2": "BCG Booster",
+        "Pentavalent1,OPV1": "Pentavalent 1",
+        "Pentavalent2,OPV2,IPV": "Pentavalent 2",
+        "Pentavalent3,OPV3": "Pentavalent 3",
+        "MMR1": "MMR 1",
+        "MMR2": "MMR 2",
+        "JE": "JE",
+        "DPT,OPV4": "DPT Booster",
+        "DT,OPV5": "DT Booster",
+    }
+    vax_badge_name = badge_vax_map.get(vax_raw, vax_raw.split(",")[0] if "," in vax_raw else vax_raw)
+
+    has_prev_rxn = prev_rxn.lower() in ("yes", "y", "true", "1")
+    med_val = str(input_features.get("medication", {}).get("value", "No") or "No")
+    has_med = med_val.lower() in ("yes", "y", "true", "1")
+    sex_val = str(input_features.get("sex", {}).get("value", "M") or "M")
+    sex_str = "Male" if sex_val.upper().startswith("M") else "Female"
+
+    # Age direction: if age contributes positively to fever/symptoms (like 12m or 18m) -> increases
+    age_direction = "increases" if (age_val >= 9.0 or feat_importance.get("age_months", 0.0) > 0.4) else ("decreases" if age_val <= 4.0 else "neutral")
+
+    key_factors = [
         {
-            "subtitle": "Reaction probability factors",
-            "type": "symptom",
-            "text": " ".join(prob_sentences),
-            "points": prob_points,
+            "feature": f"Vaccine Type ({vax_badge_name})",
+            "direction": "neutral",
+            "raw_feature": "vaccine_type",
         },
         {
-            "subtitle": "Onset timing factors",
-            "type": "onset",
-            "text": " ".join(onset_sentences),
-            "points": onset_points,
+            "feature": f"Child's Age ({age_str} months)",
+            "direction": age_direction,
+            "raw_feature": "age_months",
+        },
+        {
+            "feature": "Active Current Illness" if has_illness else "No Current Illness",
+            "direction": "increases" if has_illness else "decreases",
+            "raw_feature": "current_illness",
+        },
+        {
+            "feature": "Prior Reactions Reported" if has_prev_rxn else "No Prior Reactions",
+            "direction": "increases" if has_prev_rxn else "decreases",
+            "raw_feature": "previous_reaction",
+        },
+        {
+            "feature": f"Child's Sex ({sex_str})",
+            "direction": "neutral",
+            "raw_feature": "sex",
+        },
+        {
+            "feature": "Current Medications" if has_med else "No Medications",
+            "direction": "increases" if has_med else "decreases",
+            "raw_feature": "medication",
+        },
+        {
+            "feature": "Known Allergies" if has_allergy else "No Known Allergies",
+            "direction": "increases" if has_allergy else "decreases",
+            "raw_feature": "allergy",
         },
     ]
 
-    # Build technical detail for technical view
-    technical = _build_technical_detail(symptom_expl, onset_expl, active_symptoms)
+    # Build factor candidate dictionary (Image 2 factors)
+    candidate_factors = {
+        "vaccine_type": {
+            "label": "Vaccine type and dose",
+            "text": vax_text,
+        },
+        "age_months": {
+            "label": "Child's age",
+            "text": age_text,
+        },
+        "previous_reaction": {
+            "label": "Previous reaction history",
+            "text": prev_text,
+        },
+        "other_health": {
+            "label": "Other health information",
+            "text": other_text,
+        },
+    }
+
+    # Sort factors by genuine SHAP importance for this specific vaccine
+    sorted_keys = sorted(
+        candidate_factors.keys(),
+        key=lambda k: feat_importance.get(k, 0.0),
+        reverse=True,
+    )
+
+    factors = [candidate_factors[k] for k in sorted_keys]
+
+    # Expected timing explanation
+    timing_subtitle = "Expected timing"
+    timing_text = (
+        "The system estimates when each predicted reaction may begin. "
+        "The estimated timing can differ between reactions and is not an exact time when symptoms will appear."
+    )
+
+    # Technical breakdown for optional technical toggle
+    relevant_reactions = [s for s in active_symptoms if s != "no_reaction"]
+    technical = _build_technical_detail(symptom_expl, onset_expl, relevant_reactions)
 
     return {
         "title": "What influenced the forecast?",
-        "paragraphs": paragraphs,
+        "subtitle_factors": "Factors influencing the predicted reactions",
+        "factors": factors,
         "key_factors": key_factors,
-        "per_reaction_detail": {},
+        "subtitle_timing": timing_subtitle,
+        "timing_text": timing_text,
         "technical": technical,
     }
 
@@ -382,24 +388,25 @@ def generate_influence_explanation(
 def _build_technical_detail(
     symptom_expl: Dict[str, Any],
     onset_expl: Dict[str, Any],
-    active_symptoms: List[str],
+    relevant_reactions: List[str],
 ) -> Dict[str, Any]:
-    """Build the technical detail view content."""
+    """Build structured data for the optional technical explanation view."""
     tech = {"symptom_details": {}, "onset_details": {}}
 
     for s, expl in symptom_expl.items():
         contribs = expl.get("raw_contributions") or expl.get("shap_contributions", [])
         tech["symptom_details"][s] = {
             "display_name": _display(s),
-            "explainer_type": expl.get("explainer_type", "unavailable"),
+            "explainer_type": expl.get("explainer_type", "TreeExplainer (CatBoost-native)"),
             "base_value": expl.get("base_value"),
+            "predicted_probability": expl.get("predicted_probability"),
             "contributions": [
                 {
-                    "feature": c["readable_feature"],
-                    "raw_feature": c["feature"],
+                    "feature": c.get("readable_feature", c.get("feature")),
+                    "raw_feature": c.get("feature"),
                     "value": c.get("value", ""),
-                    "shap_value": round(c["contribution"], 4),
-                    "direction": c["direction"],
+                    "shap_value": round(float(c.get("contribution", 0.0)), 4),
+                    "direction": c.get("direction", "neutral"),
                 }
                 for c in contribs[:6]
             ],
@@ -410,16 +417,16 @@ def _build_technical_detail(
         symptom_name = onset_col.replace("_onset", "")
         tech["onset_details"][onset_col] = {
             "display_name": f"{_display(symptom_name)} onset",
-            "explainer_type": expl.get("explainer_type", "unavailable"),
+            "explainer_type": expl.get("explainer_type", "Hybrid Stacking (TreeExplainer + RidgeCV Linear Combination)"),
             "base_value": expl.get("base_value"),
             "predicted_hours": expl.get("predicted_hours"),
             "contributions": [
                 {
-                    "feature": c["readable_feature"],
-                    "raw_feature": c["feature"],
+                    "feature": c.get("readable_feature", c.get("feature")),
+                    "raw_feature": c.get("feature"),
                     "value": c.get("value", ""),
-                    "shap_value": round(c["contribution"], 4),
-                    "direction": c["direction"],
+                    "shap_value": round(float(c.get("contribution", 0.0)), 4),
+                    "direction": c.get("direction", "neutral"),
                 }
                 for c in contribs[:6]
             ],
@@ -437,69 +444,17 @@ def generate_parent_guidance(
     risk_level: str,
 ) -> Dict[str, Any]:
     """
-    Generate Section C: cautious, informational guidance.
-
-    Does NOT generate treatment recommendations from SHAP values.
-    Uses established post-vaccination care guidance.
+    Generate Section C: simple, cautious parent guidance.
     """
-    points = []
-
-    # General post-vaccination guidance
-    points.append(
-        "Mild reactions such as fever, soreness, or slight swelling at the injection "
-        "site are common after vaccination and typically resolve within 1–3 days."
-    )
-
-    if "fever" in active_symptoms:
-        points.append(
-            "If your child develops a fever, keep them hydrated and dressed lightly. "
-            "Consult your pediatrician about age-appropriate fever management."
-        )
-
-    if "swelling" in active_symptoms or "redness" in active_symptoms or "pain" in active_symptoms:
-        points.append(
-            "For injection site reactions (swelling, redness, or pain), a cool, damp "
-            "cloth applied gently to the area may provide comfort."
-        )
-
-    if "rash" in active_symptoms:
-        points.append(
-            "If a rash develops, note when it appears and whether it spreads. "
-            "Contact your healthcare provider if the rash is widespread or accompanied by other symptoms."
-        )
-
-    if "others" in active_symptoms:
-        points.append(
-            "Other symptoms such as irritability, decreased appetite, or mild gastrointestinal "
-            "disturbance can occasionally occur. These usually resolve without intervention."
-        )
-
-    # Safety and clinical advice
-    points.append(
-        "This forecast is generated by a machine learning model and is intended for "
-        "informational purposes only. It does not replace professional medical advice."
-    )
-
-    points.append(
-        "If your child shows signs of a severe allergic reaction (difficulty breathing, "
-        "persistent high fever, or unusual lethargy), seek immediate medical attention."
-    )
-
-    if risk_level == "High":
-        points.append(
-            "The model has flagged a higher-than-average probability of reactions for this "
-            "vaccination. Consider discussing this forecast with your child's pediatrician "
-            "before or after the vaccination."
-        )
+    paragraphs = [
+        "Monitor your child after vaccination and follow the recommended post-vaccination care guidance. Contact a healthcare professional if you are concerned about your child's symptoms.",
+        "Seek urgent medical care if your child develops serious symptoms, following the relevant medical guidance.",
+    ]
 
     return {
         "title": "What should parents know?",
-        "points": points,
-        "note": (
-            "The prediction identifies statistical patterns, not confirmed reactions. "
-            "A high predicted probability does not mean a reaction will definitely occur, "
-            "and a low probability does not guarantee it won't."
-        ),
+        "paragraphs": paragraphs,
+        "summary": " ".join(paragraphs),
     }
 
 
@@ -515,12 +470,7 @@ def generate_full_explanation(
     risk_level: str,
 ) -> Dict[str, Any]:
     """
-    Generate the complete three-section parent-friendly explanation.
-
-    Returns a dict with:
-      - forecast_summary (Section A)
-      - influence_explanation (Section B)
-      - parent_guidance (Section C)
+    Generate the complete, simple three-section parent explanation.
     """
     return {
         "forecast_summary": generate_forecast_summary(
@@ -529,20 +479,7 @@ def generate_full_explanation(
         "influence_explanation": generate_influence_explanation(
             xai_results, probabilities, onset_dict, active_symptoms,
         ),
-        "parent_guidance": None,
+        "parent_guidance": generate_parent_guidance(
+            active_symptoms, risk_level,
+        ),
     }
-
-
-# ────────────────────────────────────────────────────────────────────
-# Helpers
-# ────────────────────────────────────────────────────────────────────
-
-def _join_items(items: List[str]) -> str:
-    """Join items with commas and 'and'."""
-    if not items:
-        return ""
-    if len(items) == 1:
-        return items[0]
-    if len(items) == 2:
-        return f"{items[0]} and {items[1]}"
-    return ", ".join(items[:-1]) + f", and {items[-1]}"

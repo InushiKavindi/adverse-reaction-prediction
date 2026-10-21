@@ -288,7 +288,7 @@ def _fallback_symptom_explanation(
 
 
 # ---------------------------------------------------------------------------
-# Onset regressor explanation (KernelSHAP on full stacking pipeline)
+# Onset regressor explanation (TreeExplainer on base models + RidgeCV combination)
 # ---------------------------------------------------------------------------
 
 def explain_onset_predictions(
@@ -300,12 +300,20 @@ def explain_onset_predictions(
     """
     Explain the hybrid stacking onset regressor predictions.
 
-    Each onset model is a Pipeline: preprocessor → StackingRegressor.
-    We use shap.KernelExplainer on the full pipeline.predict method
-    with a small background dataset for the expectation.
+    Architecture of each onset model:
+      Pipeline:
+        preprocessor (ColumnTransformer)
+        regressor (StackingRegressor):
+          base models: RandomForest, GradientBoosting, ExtraTrees
+          final_estimator: RidgeCV (passthrough=False)
 
-    This ensures the explanation accounts for the complete pipeline
-    including base model → RidgeCV meta-model combination.
+    Because RidgeCV is a linear meta-model over the base model predictions:
+      y_hat = intercept + sum_m(w_m * y_hat_m)
+    By linearity of Shapley values:
+      phi_j = sum_m(w_m * phi_{m, j})
+      E[y_hat] = intercept + sum_m(w_m * E_m[y_hat])
+    This mathematically and completely explains the entire stacking regressor
+    (base models + RidgeCV combination) exactly and deterministically.
     """
     result: Dict[str, Any] = {}
 
@@ -313,12 +321,19 @@ def explain_onset_predictions(
         import shap
 
         for onset_col, onset_value in onset_dict.items():
-            # Map onset_col (e.g. "fever_onset") to its model key
-            # The onset_models dict is keyed by onset column name
+            # Support both "fever_onset" and "fever"
             model = onset_models.get(onset_col)
+            if model is None:
+                if onset_col.endswith("_onset"):
+                    alt_key = onset_col.replace("_onset", "")
+                else:
+                    alt_key = f"{onset_col}_onset"
+                model = onset_models.get(alt_key)
+
             if model is None:
                 result[onset_col] = {
                     "shap_contributions": [],
+                    "raw_contributions": [],
                     "base_value": None,
                     "predicted_hours": onset_value,
                     "explainer_type": "unavailable",
@@ -326,59 +341,140 @@ def explain_onset_predictions(
                 continue
 
             try:
-                # Create a predict function wrapper for KernelExplainer
-                # We need raw feature input → final stacking prediction
-                def predict_fn(X_input):
-                    df = pd.DataFrame(X_input, columns=input_df.columns)
-                    return model.predict(df)
+                preprocessor = model.named_steps.get("preprocessor")
+                stacking = model.named_steps.get("regressor")
 
-                # Background data: use a small sample or the input itself
-                if background_df is not None and len(background_df) >= 5:
-                    bg_sample = shap.sample(background_df, min(10, len(background_df)))
+                if (
+                    preprocessor is not None
+                    and hasattr(stacking, "estimators_")
+                    and hasattr(stacking, "final_estimator_")
+                ):
+                    # --- Exact Stacking Explanation ---
+                    X_trans = preprocessor.transform(input_df)
+                    try:
+                        feature_names = preprocessor.get_feature_names_out().tolist()
+                    except Exception:
+                        feature_names = [f"feat_{i}" for i in range(X_trans.shape[1])]
+
+                    ridge = stacking.final_estimator_
+                    base_models = stacking.estimators_
+
+                    # 1. TreeExplainer for each base model (RF, GB, ET)
+                    shap_per_base = []
+                    expected_vals = []
+                    for est in base_models:
+                        exp = shap.TreeExplainer(est)
+                        sv = exp.shap_values(X_trans)
+                        if isinstance(sv, list):
+                            sv = sv[0]
+                        if sv.ndim > 1:
+                            sv = sv[0]
+                        ev = exp.expected_value
+                        if isinstance(ev, (list, np.ndarray)):
+                            ev = float(np.squeeze(ev))
+                        else:
+                            ev = float(ev)
+                        shap_per_base.append(sv)
+                        expected_vals.append(ev)
+
+                    # 2. Linear combination via RidgeCV meta-model weights
+                    coefs = getattr(ridge, "coef_", None)
+                    if coefs is None:
+                        coefs = np.ones(len(base_models)) / len(base_models)
+                    intercept = float(np.squeeze(getattr(ridge, "intercept_", 0.0)))
+
+                    combined_shap = np.zeros_like(shap_per_base[0])
+                    for c, sv in zip(coefs, shap_per_base):
+                        combined_shap += c * sv
+
+                    combined_expected = float(intercept + sum(c * ev for c, ev in zip(coefs, expected_vals)))
+
+                    # 3. Map one-hot encoded columns back to parent clinical features
+                    parent_shap = {col: 0.0 for col in input_df.columns}
+                    for fi, fn in enumerate(feature_names):
+                        clean_fn = fn
+                        for prefix in ("num__", "cat__", "remainder__"):
+                            if clean_fn.startswith(prefix):
+                                clean_fn = clean_fn[len(prefix):]
+                                break
+                        for parent in input_df.columns:
+                            if clean_fn == parent or clean_fn.startswith(f"{parent}_"):
+                                parent_shap[parent] += float(combined_shap[fi])
+                                break
+
+                    clinical_contributions = []
+                    for parent, total_shap in parent_shap.items():
+                        raw_val = input_df[parent].iloc[0] if parent in input_df.columns else ""
+                        clinical_contributions.append({
+                            "feature": parent,
+                            "readable_feature": _readable_feature_name(parent),
+                            "value": _readable_feature_value(parent, raw_val),
+                            "contribution": float(total_shap),
+                            "direction": "later" if total_shap > 0 else "earlier",
+                        })
+                    clinical_contributions.sort(key=lambda x: abs(x["contribution"]), reverse=True)
+
+                    raw_contributions = []
+                    for fi, fn in enumerate(feature_names):
+                        raw_val = X_trans[0, fi] if fi < X_trans.shape[1] else None
+                        sv_val = float(combined_shap[fi])
+                        if abs(sv_val) < 1e-6:
+                            continue
+                        raw_contributions.append({
+                            "feature": fn,
+                            "readable_feature": _readable_feature_name(fn),
+                            "value": raw_val if raw_val is not None else "",
+                            "contribution": sv_val,
+                            "direction": "later" if sv_val > 0 else "earlier",
+                        })
+                    raw_contributions.sort(key=lambda x: abs(x["contribution"]), reverse=True)
+
+                    result[onset_col] = {
+                        "shap_contributions": clinical_contributions,
+                        "raw_contributions": raw_contributions,
+                        "base_value": round(combined_expected, 2),
+                        "predicted_hours": round(float(onset_value), 2) if onset_value is not None else None,
+                        "explainer_type": "Hybrid Stacking (TreeExplainer + RidgeCV Meta-Model)",
+                    }
+
                 else:
-                    # Use the input itself as minimal background
+                    # Model-agnostic fallback (e.g. for arbitrary non-stacking pipelines)
+                    def predict_fn(X_input):
+                        df = pd.DataFrame(X_input, columns=input_df.columns)
+                        return model.predict(df)
+
                     bg_sample = input_df
+                    explainer = shap.KernelExplainer(predict_fn, bg_sample)
+                    shap_values = explainer.shap_values(input_df, nsamples=25)
+                    sv = shap_values[0] if shap_values.ndim > 1 else shap_values
+                    base_val = float(np.squeeze(explainer.expected_value))
 
-                explainer = shap.KernelExplainer(predict_fn, bg_sample)
-                shap_values = explainer.shap_values(input_df, nsamples=35)
+                    contributions = []
+                    for fi, fname in enumerate(input_df.columns):
+                        raw_val = input_df.iloc[0, fi]
+                        s_val = float(sv[fi])
+                        contributions.append({
+                            "feature": fname,
+                            "readable_feature": _readable_feature_name(fname),
+                            "value": _readable_feature_value(fname, raw_val),
+                            "contribution": s_val,
+                            "direction": "later" if s_val > 0 else "earlier",
+                        })
+                    contributions.sort(key=lambda x: abs(x["contribution"]), reverse=True)
 
-                if shap_values.ndim > 1:
-                    sv = shap_values[0]
-                else:
-                    sv = shap_values
-
-                base_val = float(explainer.expected_value)
-                if isinstance(explainer.expected_value, (list, np.ndarray)):
-                    base_val = float(explainer.expected_value[0])
-
-                contributions = []
-                for fi, (fname, shap_v) in enumerate(zip(input_df.columns, sv)):
-                    if abs(shap_v) < 1e-4:
-                        continue
-
-                    raw_val = input_df.iloc[0, fi]
-
-                    contributions.append({
-                        "feature": fname,
-                        "readable_feature": _readable_feature_name(fname),
-                        "value": _readable_feature_value(fname, raw_val),
-                        "contribution": float(shap_v),
-                        "direction": "later" if shap_v > 0 else "earlier",
-                    })
-
-                contributions.sort(key=lambda x: abs(x["contribution"]), reverse=True)
-
-                result[onset_col] = {
-                    "shap_contributions": contributions[:8],
-                    "base_value": base_val,
-                    "predicted_hours": onset_value,
-                    "explainer_type": "KernelExplainer",
-                }
+                    result[onset_col] = {
+                        "shap_contributions": contributions,
+                        "raw_contributions": contributions,
+                        "base_value": round(base_val, 2),
+                        "predicted_hours": round(float(onset_value), 2) if onset_value is not None else None,
+                        "explainer_type": "KernelExplainer",
+                    }
 
             except Exception as e:
-                logger.warning(f"KernelExplainer failed for {onset_col}: {e}")
+                logger.warning(f"Onset explanation failed for {onset_col}: {e}")
                 result[onset_col] = {
                     "shap_contributions": [],
+                    "raw_contributions": [],
                     "base_value": None,
                     "predicted_hours": onset_value,
                     "explainer_type": "unavailable",
@@ -386,10 +482,11 @@ def explain_onset_predictions(
                 }
 
     except Exception as e:
-        logger.error(f"Onset explanation failed: {e}\n{traceback.format_exc()}")
+        logger.error(f"Onset explanation service failed: {e}\n{traceback.format_exc()}")
         for onset_col, onset_value in onset_dict.items():
             result[onset_col] = {
                 "shap_contributions": [],
+                "raw_contributions": [],
                 "base_value": None,
                 "predicted_hours": onset_value,
                 "explainer_type": "unavailable",
@@ -399,14 +496,14 @@ def explain_onset_predictions(
 
 
 # ---------------------------------------------------------------------------
-# Background data loader (for KernelSHAP)
+# Background data loader (for fallback KernelSHAP)
 # ---------------------------------------------------------------------------
 
 _background_cache: Optional[pd.DataFrame] = None
 
 
 def _load_background_data() -> Optional[pd.DataFrame]:
-    """Load a small background sample from training data for KernelSHAP."""
+    """Load a small background sample from training data for fallback KernelSHAP."""
     global _background_cache
     if _background_cache is not None:
         return _background_cache
@@ -462,7 +559,7 @@ def generate_unified_explanation(
 
     Returns a structured dict containing raw XAI results for:
     - symptom_explanations: per-reaction SHAP from CatBoost TreeExplainer
-    - onset_explanations: per-onset SHAP from KernelExplainer
+    - onset_explanations: per-onset SHAP from Hybrid Stacking (TreeExplainer + RidgeCV Meta-Model)
     - metadata about the explanation
     """
     # 1. Explain symptom predictions
@@ -489,7 +586,7 @@ def generate_unified_explanation(
         },
         "active_symptoms": active_symptoms,
         "xai_methods": {
-            "symptom": "SHAP TreeExplainer (CatBoost-native)",
-            "onset": "SHAP KernelExplainer (model-agnostic, full stacking pipeline)",
+            "symptom": "CatBoost TreeExplainer",
+            "onset": "Hybrid Stacking (TreeExplainer + RidgeCV Meta-Model Linear Combination)",
         },
     }
