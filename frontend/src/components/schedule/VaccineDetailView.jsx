@@ -16,7 +16,8 @@ import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
 import {
   ReactionIllnessModal,
   LogReactionsModal,
-  DoctorScheduledDateModal
+  DoctorScheduledDateModal,
+  UpdateAdministrationRecordModal
 } from "./VaccineReactionModals";
 import {
   mapVaccineToModelType,
@@ -31,10 +32,12 @@ export default function VaccineDetailView({ vaccine: initialVaccine, onBack, onP
   const { activeChild, schedule = [], updateVaccineStatus, updateChild } = useChild();
   const [updating, setUpdating] = useState(false);
 
-  // Popup 1: Clinical Context (Current Illness & Medication)
+  // Popup 1: Clinical Context (Current Illness, Medication & Batch No)
   const [showReactionForm, setShowReactionForm] = useState(false);
   const [currentIllness, setCurrentIllness] = useState("");
   const [currentMedication, setCurrentMedication] = useState("");
+  const [batchNumber, setBatchNumber] = useState("");
+  const [isBatchLocked, setIsBatchLocked] = useState(false);
 
   // Popup 2: Post-Vaccination Reactions & Onset Times Form
   const [showLogReactionsModal, setShowLogReactionsModal] = useState(false);
@@ -46,6 +49,12 @@ export default function VaccineDetailView({ vaccine: initialVaccine, onBack, onP
   const [showDoctorDateModal, setShowDoctorDateModal] = useState(false);
   const [doctorDateInput, setDoctorDateInput] = useState("");
   const [savingDoctorDate, setSavingDoctorDate] = useState(false);
+
+  // Popup 4: Update Administration Record (Batch No & Completed Date)
+  const [showEditRecordModal, setShowEditRecordModal] = useState(false);
+  const [editBatchInput, setEditBatchInput] = useState("");
+  const [editCompletedDateInput, setEditCompletedDateInput] = useState("");
+  const [savingEditRecord, setSavingEditRecord] = useState(false);
 
   // Read current live record from schedule
   const vaccine = schedule.find((s) => s.id === initialVaccine?.id) || initialVaccine;
@@ -166,21 +175,19 @@ export default function VaccineDetailView({ vaccine: initialVaccine, onBack, onP
       if (!scheduledDayArrived) {
         return;
       }
-      if (isFirstVaccine) {
-        // Very first vaccine (BCG) completes directly without illness/medication popup
-        const todayStr = new Date().toISOString().split("T")[0];
-        await handleSaveStatus("completed", todayStr, vaccine.reaction || null);
-        return;
-      }
       const prevIllness = vaccine.reaction?.currentIllness !== undefined
         ? vaccine.reaction.currentIllness
-        : (activeChild?.currentIllness || "");
+        : (activeChild?.currentIllness || (isFirstVaccine ? "None" : ""));
       const prevMedication = vaccine.reaction?.currentMedication !== undefined
         ? vaccine.reaction.currentMedication
-        : (activeChild?.currentMedication || "");
+        : (activeChild?.currentMedication || (isFirstVaccine ? "None" : ""));
+      const existingBatch = vaccine.reaction?.batchNumber || vaccine.batchNumber || "";
+      const isAlreadyRecorded = Boolean(vaccine.status === "completed" && (vaccine.reaction?.batchNumber || (vaccine.batchNumber && vaccine.batchNumber !== "Pending" && vaccine.batchNumber !== "Pending Allocation")));
 
-      setCurrentIllness(prevIllness);
-      setCurrentMedication(prevMedication);
+      setCurrentIllness(prevIllness || "None");
+      setCurrentMedication(prevMedication || "None");
+      setBatchNumber(existingBatch);
+      setIsBatchLocked(isAlreadyRecorded);
       setShowReactionForm(true);
     }
   };
@@ -196,15 +203,19 @@ export default function VaccineDetailView({ vaccine: initialVaccine, onBack, onP
     const todayStr = new Date().toISOString().split("T")[0];
     const illnessVal = currentIllness.trim() || "None";
     const medicationVal = currentMedication.trim() || "None";
+    const finalBatch = (isBatchLocked && (vaccine.reaction?.batchNumber || vaccine.batchNumber))
+      ? (vaccine.reaction?.batchNumber || vaccine.batchNumber)
+      : (batchNumber.trim() || vaccine.batchNumber || "Pending");
 
     const reactionPayload = {
       hasReaction: vaccine.reaction?.hasReaction || false,
       currentIllness: illnessVal,
       currentMedication: medicationVal,
+      batchNumber: finalBatch,
       symptoms: vaccine.reaction?.symptoms || [],
       onsets: vaccine.reaction?.onsets || {},
       otherDescription: vaccine.reaction?.otherDescription || null,
-      recordedAt: new Date().toISOString()
+      recordedAt: vaccine.reaction?.recordedAt || new Date().toISOString()
     };
     setShowReactionForm(false);
 
@@ -294,10 +305,11 @@ export default function VaccineDetailView({ vaccine: initialVaccine, onBack, onP
       hasReaction: !isNoReaction,
       currentIllness: vaccine.reaction?.currentIllness || activeChild?.currentIllness || "None",
       currentMedication: vaccine.reaction?.currentMedication || activeChild?.currentMedication || "None",
+      batchNumber: vaccine.reaction?.batchNumber || vaccine.batchNumber,
       symptoms: isNoReaction ? ["no_reaction"] : logSelectedSymptoms,
       onsets: cleanedOnsets,
       otherDescription: logOtherDesc || null,
-      recordedAt: new Date().toISOString()
+      recordedAt: vaccine.reaction?.recordedAt || new Date().toISOString()
     };
 
     setShowLogReactionsModal(false);
@@ -328,6 +340,32 @@ export default function VaccineDetailView({ vaccine: initialVaccine, onBack, onP
       console.error("Failed to save doctor scheduled date:", err);
     } finally {
       setSavingDoctorDate(false);
+    }
+  };
+
+  const handleOpenEditRecordModal = () => {
+    const currentBatch = vaccine.reaction?.batchNumber || vaccine.batchNumber || "";
+    const currentDate = vaccine.dateCompleted || vaccine.dueDate || new Date().toISOString().split("T")[0];
+    setEditBatchInput(currentBatch);
+    setEditCompletedDateInput(currentDate);
+    setShowEditRecordModal(true);
+  };
+
+  const handleSaveEditRecord = async (e) => {
+    if (e) e.preventDefault();
+    if (!editBatchInput.trim() || !editCompletedDateInput) return;
+    setSavingEditRecord(true);
+    try {
+      const updatedReaction = {
+        ...(vaccine?.reaction || {}),
+        batchNumber: editBatchInput.trim()
+      };
+      await handleSaveStatus("completed", editCompletedDateInput, updatedReaction);
+      setShowEditRecordModal(false);
+    } catch (err) {
+      console.error("Failed to update vaccine record:", err);
+    } finally {
+      setSavingEditRecord(false);
     }
   };
 
@@ -363,10 +401,22 @@ export default function VaccineDetailView({ vaccine: initialVaccine, onBack, onP
               </span>
 
               {isCompleted ? (
-                <Badge variant="outline" className="border-emerald-400 bg-emerald-50 text-emerald-600 font-semibold px-2.5 py-0.5 text-xs rounded-full inline-flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                  Completed ({formatDisplayDate(vaccine.dateCompleted || vaccine.dueDate)})
-                </Badge>
+                <>
+                  <Badge variant="outline" className="border-emerald-400 bg-emerald-50 text-emerald-600 font-semibold px-2.5 py-0.5 text-xs rounded-full inline-flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    Completed ({formatDisplayDate(vaccine.dateCompleted || vaccine.dueDate)})
+                  </Badge>
+                  {(vaccine.reaction?.batchNumber || vaccine.batchNumber) && (
+                    <Badge
+                      variant="outline"
+                      onClick={handleOpenEditRecordModal}
+                      className="border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 font-mono text-[11px] font-bold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 cursor-pointer transition active:scale-95"
+                      title="Click to update Batch No or Completed Date"
+                    >
+                      Batch: {vaccine.reaction?.batchNumber || vaccine.batchNumber}
+                    </Badge>
+                  )}
+                </>
               ) : isDue && scheduledDayArrived ? (
                 <Badge variant="outline" className="border-sky-400 bg-sky-50 text-sky-600 font-semibold px-2.5 py-0.5 text-xs rounded-full inline-flex items-center gap-1.5">
                   <AlertCircle className="w-3.5 h-3.5 text-sky-600" />
@@ -504,6 +554,7 @@ export default function VaccineDetailView({ vaccine: initialVaccine, onBack, onP
           recordedReaction={recordedReaction}
           handleOpenLogReactions={handleOpenLogReactions}
           onOpenDoctorDateModal={handleOpenDoctorDateModal}
+          onOpenEditRecordModal={handleOpenEditRecordModal}
         />
 
         {/* TAB 2: Model Adverse Reaction Predictions & Comfort Care */}
@@ -522,7 +573,7 @@ export default function VaccineDetailView({ vaccine: initialVaccine, onBack, onP
         />
       </Tabs>
 
-      {/* POPUP 1: Record a Reaction (Current Illness & Medication) */}
+      {/* POPUP 1: Record a Reaction (Current Illness, Medication & Vaccine Batch No) */}
       <ReactionIllnessModal
         open={showReactionForm}
         onOpenChange={setShowReactionForm}
@@ -530,6 +581,9 @@ export default function VaccineDetailView({ vaccine: initialVaccine, onBack, onP
         setCurrentIllness={setCurrentIllness}
         currentMedication={currentMedication}
         setCurrentMedication={setCurrentMedication}
+        batchNumber={batchNumber}
+        setBatchNumber={setBatchNumber}
+        isBatchLocked={isBatchLocked}
         onSubmit={handleReactionFormSubmit}
         updating={updating}
       />
@@ -558,6 +612,19 @@ export default function VaccineDetailView({ vaccine: initialVaccine, onBack, onP
         birthDate={activeChild?.birthDate}
         onSubmit={handleSaveDoctorScheduledDate}
         saving={savingDoctorDate}
+      />
+
+      {/* POPUP 4: Update Administration Record (Batch No & Completed Date) */}
+      <UpdateAdministrationRecordModal
+        open={showEditRecordModal}
+        onOpenChange={setShowEditRecordModal}
+        vaccine={vaccine}
+        batchNumber={editBatchInput}
+        setBatchNumber={setEditBatchInput}
+        dateCompleted={editCompletedDateInput}
+        setDateCompleted={setEditCompletedDateInput}
+        onSubmit={handleSaveEditRecord}
+        saving={savingEditRecord}
       />
     </div>
   );

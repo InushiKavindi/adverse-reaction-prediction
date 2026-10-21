@@ -1,5 +1,5 @@
 import React from "react";
-import { ArrowLeft, User, Clock, Check, Calendar } from "lucide-react";
+import { ArrowLeft, User, Clock, Check, Calendar, CheckCircle2 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "../ui/dialog";
 import { Button } from "../ui/button";
 import { calculateAgeMonthsAtDate } from "./vaccineUtils";
@@ -21,6 +21,9 @@ export function ReactionIllnessModal({
   setCurrentIllness,
   currentMedication,
   setCurrentMedication,
+  batchNumber = "",
+  setBatchNumber,
+  isBatchLocked = false,
   onSubmit,
   updating
 }) {
@@ -49,7 +52,46 @@ export function ReactionIllnessModal({
           </h3>
 
           <div className="bg-slate-50/80 border border-slate-200/70 rounded-2xl p-4 space-y-3.5">
+            {/* Batch No field */}
             <div className="space-y-1">
+              <div className="flex items-center justify-between gap-2">
+                <label htmlFor="modal-batch-number" className="text-xs font-bold text-slate-800">
+                  Batch No
+                </label>
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                  isBatchLocked
+                    ? "bg-slate-100 text-slate-500 border-slate-200"
+                    : "bg-white text-slate-600 border-slate-200"
+                }`}>
+                  {isBatchLocked ? "Cannot be changed" : "Record at completion"}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400">
+                {isBatchLocked
+                  ? "Recorded vaccine batch / lot number (locked)"
+                  : "Batch / lot number of the administered vaccine"}
+              </p>
+              <input
+                id="modal-batch-number"
+                type="text"
+                value={batchNumber}
+                onChange={(e) => {
+                  if (!isBatchLocked && setBatchNumber) {
+                    setBatchNumber(e.target.value);
+                  }
+                }}
+                disabled={isBatchLocked}
+                readOnly={isBatchLocked}
+                placeholder="e.g. BCG-2024-A9"
+                className={`w-full px-3.5 py-2 text-xs border rounded-xl outline-none transition ${
+                  isBatchLocked
+                    ? "bg-slate-100/90 border-slate-200 text-slate-500 cursor-not-allowed select-none font-mono font-medium"
+                    : "bg-white border-slate-200 focus:border-sky-400 focus:ring-2 focus:ring-sky-100 text-slate-800 placeholder:text-slate-400"
+                }`}
+              />
+            </div>
+
+            <div className="space-y-1 pt-3 border-t border-slate-200/60">
               <div className="flex items-center justify-between gap-2">
                 <label htmlFor="modal-current-illness" className="text-xs font-bold text-slate-800">
                   Current Illness
@@ -326,3 +368,106 @@ export function DoctorScheduledDateModal({
 }
 
 export const Bcg2ScheduledDateModal = DoctorScheduledDateModal;
+
+export function UpdateAdministrationRecordModal({
+  open,
+  onOpenChange,
+  vaccine,
+  batchNumber,
+  setBatchNumber,
+  dateCompleted,
+  setDateCompleted,
+  onSubmit,
+  saving = false
+}) {
+  if (!vaccine) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md bg-white rounded-3xl p-6 shadow-2xl border-slate-100">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div>
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+              Administration Record
+            </span>
+            <DialogTitle className="text-base sm:text-lg font-extrabold text-slate-900 mt-1">
+              Update Record
+            </DialogTitle>
+          </div>
+          <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-xs shrink-0">
+            <CheckCircle2 className="w-4 h-4" />
+          </div>
+        </div>
+
+        <form onSubmit={onSubmit} className="space-y-4 pt-1">
+          <div>
+            <h3 className="text-sm font-extrabold text-slate-900 leading-snug">
+              Update record for {vaccine.vaccineName}
+            </h3>
+            <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+              Correct or update the vaccine batch / lot number and the administered date for this child.
+            </p>
+          </div>
+
+          <div className="bg-slate-50/80 border border-slate-200/70 rounded-2xl p-4 space-y-3.5">
+            {/* Batch No field */}
+            <div className="space-y-1.5">
+              <label htmlFor="modal-update-batch" className="text-xs font-bold text-slate-800 block">
+                Batch No
+              </label>
+              <input
+                id="modal-update-batch"
+                type="text"
+                required
+                value={batchNumber}
+                onChange={(e) => setBatchNumber(e.target.value)}
+                placeholder="e.g. MMR-2025-X123"
+                className="w-full px-3.5 py-2 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition text-slate-800 font-mono font-medium"
+              />
+              <p className="text-[11px] text-slate-400">
+                Batch / lot number printed on the vaccine vial
+              </p>
+            </div>
+
+            {/* Completed Date field */}
+            <div className="space-y-1.5 pt-3 border-t border-slate-200/60">
+              <label htmlFor="modal-update-completed-date" className="text-xs font-bold text-slate-800 block">
+                Completed Date
+              </label>
+              <input
+                id="modal-update-completed-date"
+                type="date"
+                required
+                max={new Date().toISOString().split("T")[0]}
+                value={dateCompleted}
+                onChange={(e) => setDateCompleted(e.target.value)}
+                className="w-full px-3.5 py-2 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition text-slate-800 font-medium"
+              />
+              <p className="text-[11px] text-slate-400">
+                Date when the vaccine was administered
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              className="text-xs font-bold rounded-xl border-slate-200 text-slate-600 hover:bg-slate-100 cursor-pointer"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={saving || !batchNumber?.trim() || !dateCompleted}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer active:scale-95"
+            >
+              {saving ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}

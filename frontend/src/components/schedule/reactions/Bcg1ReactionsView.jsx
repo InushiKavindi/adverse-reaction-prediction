@@ -126,7 +126,7 @@ export default function Bcg1ReactionsView({
             <div>
               <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                 <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                <span>BCG Scar Formation Assessment (Week 6 – 12)</span>
+                <span>BCG Scar Formation Assessment</span>
               </h4>
               <p className="text-[11px] text-slate-500 mt-0.5">
                 Check your baby's right upper arm injection site to verify whether a permanent BCG scar has developed.
@@ -260,97 +260,32 @@ export default function Bcg1ReactionsView({
         </div>
       </Card>
 
-      {/* BCG Injection-Site Care Card */}
-      <Card className="bg-white border-slate-100 rounded-2xl p-4 sm:p-5 shadow-xs space-y-3">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-xl bg-pink-100 text-pink-700 flex items-center justify-center font-bold shrink-0">
-            <HeartPulse className="w-4 h-4" />
+      {/* What Should Parents Know Card */}
+      <Card className="bg-white border-slate-100 rounded-3xl p-4 sm:p-5 shadow-xs">
+        <div className="space-y-2.5">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0 bg-emerald-100 text-emerald-700">
+              <ShieldCheck className="w-4 h-4" />
+            </div>
+            <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+              WHAT SHOULD PARENTS KNOW?
+            </h4>
           </div>
-          <div>
-            <CardTitle className="text-sm sm:text-base font-bold text-slate-900">
-              BCG Injection-Site Care
-            </CardTitle>
-            <CardDescription className="text-[11px] text-slate-400">
-              Recommended daily care for your baby's injection site
-            </CardDescription>
-          </div>
-        </div>
-
-        <ul className="text-xs text-slate-600 space-y-2 pl-1">
-          <li className="flex items-start gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#ff2d78] shrink-0 mt-1.5" />
-            <p>
-              <strong className="text-slate-800">Keep it clean and dry:</strong> Bathe your baby as usual and gently pat the area dry.
-            </p>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#ff2d78] shrink-0 mt-1.5" />
-            <p>
-              <strong className="text-slate-800">Avoid creams and ointments:</strong> Do not apply antiseptics, oils, herbal products or other medicines unless a healthcare professional advises you to.
-            </p>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#ff2d78] shrink-0 mt-1.5" />
-            <p>
-              <strong className="text-slate-800">Do not disturb the sore:</strong> Avoid squeezing, scratching, rubbing or removing the crust.
-            </p>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#ff2d78] shrink-0 mt-1.5" />
-            <p>
-              <strong className="text-slate-800">Avoid adhesive plasters:</strong> Leave the area uncovered where possible. If it is discharging, ask a healthcare professional how to protect it with a suitable loose, dry dressing.
-            </p>
-          </li>
-        </ul>
-      </Card>
-
-      {/* When to Seek Medical Advice Card */}
-      <Card className="bg-white border-amber-100 rounded-2xl p-4 sm:p-5 shadow-xs space-y-3">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold shrink-0">
-            <AlertCircle className="w-4 h-4 text-amber-700" />
-          </div>
-          <div>
-            <CardTitle className="text-sm sm:text-base font-bold text-slate-900">
-              When to Seek Medical Advice
-            </CardTitle>
-            <CardDescription className="text-[11px] text-slate-400">
-              Important symptoms requiring professional clinical evaluation
-            </CardDescription>
-          </div>
-        </div>
-
-        <div className="space-y-2.5 text-xs text-slate-600">
-          <p className="font-semibold text-slate-800">Contact a healthcare professional if:</p>
-          <ul className="space-y-1.5 pl-1">
-            <li className="flex items-start gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0 mt-1.5" />
-              <span>The injection site becomes increasingly red, hot, painful or swollen.</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0 mt-1.5" />
-              <span>A large swelling, abscess or substantial amount of pus develops.</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0 mt-1.5" />
-              <span>The sore appears unusually quickly after vaccination or does not heal as expected.</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0 mt-1.5" />
-              <span>Swollen glands develop in the armpit or near the injection site, particularly if they are large, painful or contain pus.</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0 mt-1.5" />
-              <span>Your baby develops a fever or seems unusually unwell.</span>
-            </li>
-          </ul>
-
-          {/* Urgent medical attention alert */}
-          <div className="mt-3 p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2 text-rose-900">
-            <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-            <p className="text-xs font-semibold leading-relaxed">
-              Seek urgent medical attention if your baby has difficulty breathing, becomes difficult to wake, or appears seriously ill.
-            </p>
+          <div className="pl-8">
+            <ul className="space-y-2 text-xs sm:text-[13px] text-slate-700 leading-relaxed">
+              <li className="flex items-start gap-2.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-400 mt-2 shrink-0" />
+                <span>
+                  Monitor your child after vaccination and follow the recommended post-vaccination care guidance. Contact a healthcare professional if you are concerned about your child's symptoms.
+                </span>
+              </li>
+              <li className="flex items-start gap-2.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-400 mt-2 shrink-0" />
+                <span>
+                  Seek urgent medical care if your child develops serious symptoms, following the relevant medical guidance.
+                </span>
+              </li>
+            </ul>
           </div>
         </div>
       </Card>

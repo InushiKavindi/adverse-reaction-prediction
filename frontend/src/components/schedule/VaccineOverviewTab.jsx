@@ -1,5 +1,5 @@
 import React from "react";
-import { Calendar, Syringe, Activity, Clock, CheckCircle2, Plus } from "lucide-react";
+import { Calendar, Syringe, Activity, Clock, CheckCircle2, Plus, Edit3 } from "lucide-react";
 import { Card, CardTitle, CardDescription } from "../ui/card";
 import { Button } from "../ui/button";
 import { TabsContent } from "../ui/tabs";
@@ -12,7 +12,8 @@ export default function VaccineOverviewTab({
   isCompleted,
   recordedReaction,
   handleOpenLogReactions,
-  onOpenDoctorDateModal
+  onOpenDoctorDateModal,
+  onOpenEditRecordModal
 }) {
   const isBcg2 = vaccine?.id === "vax-bcg2" || vaccine?.vaccineName?.toLowerCase().includes("bcg 2") || vaccine?.vaccineName?.toLowerCase().includes("bcg2");
   const isFirstVaccine = !isBcg2 && (vaccine?.id === "vax-1" || (vaccine?.vaccineName?.toLowerCase().includes("bcg") && !vaccine?.vaccineName?.toLowerCase().includes("bcg 2") && !vaccine?.vaccineName?.toLowerCase().includes("bcg2")));
@@ -44,20 +45,34 @@ export default function VaccineOverviewTab({
             </div>
           </div>
 
-          {!isFirstVaccine && onOpenDoctorDateModal && (
-            <Button
-              type="button"
-              onClick={onOpenDoctorDateModal}
-              className="bg-[#ff2d78] hover:bg-[#e02468] text-white text-xs font-bold px-3.5 py-2 rounded-xl transition shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0 self-start sm:self-auto active:scale-95"
-            >
-              {hasCustomDate ? (
-                <Calendar className="w-3.5 h-3.5" />
-              ) : (
-                <Plus className="w-3.5 h-3.5" />
-              )}
-              <span>{hasCustomDate ? "Update Date" : "Add Date"}</span>
-            </Button>
-          )}
+          <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+            {!isFirstVaccine && onOpenDoctorDateModal && (
+              <Button
+                type="button"
+                onClick={onOpenDoctorDateModal}
+                className="bg-[#ff2d78] hover:bg-[#e02468] text-white text-xs font-bold px-3.5 py-2 rounded-xl transition shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95"
+              >
+                {hasCustomDate ? (
+                  <Calendar className="w-3.5 h-3.5" />
+                ) : (
+                  <Plus className="w-3.5 h-3.5" />
+                )}
+                <span>{hasCustomDate ? "Update Date" : "Add Date"}</span>
+              </Button>
+            )}
+
+            {isCompleted && onOpenEditRecordModal && (
+              <Button
+                type="button"
+                onClick={onOpenEditRecordModal}
+                variant="outline"
+                className="border-emerald-300 bg-emerald-50/80 hover:bg-emerald-100 text-emerald-800 text-xs font-bold px-3.5 py-2 rounded-xl transition shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-95"
+              >
+                <Edit3 className="w-3.5 h-3.5 text-emerald-700" />
+                <span>Update Record</span>
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* The 3 Date Columns / Cards */}
@@ -110,19 +125,43 @@ export default function VaccineOverviewTab({
               ? "bg-emerald-50/70 border-emerald-200/80"
               : "bg-slate-50/80 border-slate-200/70"
           }`}>
-            <span className={`text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 ${
-              isCompleted ? "text-emerald-700" : "text-slate-400"
-            }`}>
-              <CheckCircle2 className={`w-3 h-3 ${isCompleted ? "text-emerald-600" : "text-slate-400"}`} />
-              Completed Date
-            </span>
+            <div className="flex items-center justify-between gap-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 ${
+                isCompleted ? "text-emerald-700" : "text-slate-400"
+              }`}>
+                <CheckCircle2 className={`w-3 h-3 ${isCompleted ? "text-emerald-600" : "text-slate-400"}`} />
+                Completed Date
+              </span>
+              {isCompleted && onOpenEditRecordModal && (
+                <button
+                  type="button"
+                  onClick={onOpenEditRecordModal}
+                  className="text-[10px] font-bold text-emerald-700 hover:text-emerald-900 hover:underline flex items-center gap-1 cursor-pointer transition active:scale-95"
+                  title="Update Batch No and Completed Date"
+                >
+                  <Edit3 className="w-3 h-3 text-emerald-600" />
+                  <span>Update</span>
+                </button>
+              )}
+            </div>
             <p className={`text-sm font-extrabold ${isCompleted ? "text-emerald-950" : "text-slate-400 italic"}`}>
               {isCompleted
                 ? formatDisplayDate(vaccine.dateCompleted || vaccine.dueDate)
                 : "Not completed yet"}
             </p>
-            <p className="text-[10px] text-slate-400">
-              {isCompleted ? "Verified administered" : "Awaiting milestone completion"}
+            <p className="text-[10px] text-slate-500 font-medium">
+              {isCompleted ? (
+                <>
+                  <span>Verified administered</span>
+                  {(vaccine.reaction?.batchNumber || vaccine.batchNumber) && (
+                    <span className="block text-[11px] font-mono text-emerald-850 font-bold mt-0.5">
+                      Batch No: {vaccine.reaction?.batchNumber || vaccine.batchNumber}
+                    </span>
+                  )}
+                </>
+              ) : (
+                "Awaiting milestone completion"
+              )}
             </p>
           </div>
         </div>

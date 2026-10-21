@@ -208,6 +208,11 @@ def update_vaccine_status(
     elif update_in.status != "completed":
         date_completed = None
 
+    existing_rec = (getattr(child, "vaccine_records", {}) or {}).get(vax_id, {})
+    existing_batch = (existing_rec.get("reaction") or {}).get("batchNumber") or existing_rec.get("batchNumber")
+    if update_in.reaction is not None and "batchNumber" not in update_in.reaction and existing_batch:
+        update_in.reaction["batchNumber"] = existing_batch
+
     if hasattr(child_repo, "update_vaccine_status"):
         updated_child = child_repo.update_vaccine_status(
             child_id=child.id,
@@ -218,9 +223,15 @@ def update_vaccine_status(
         )
     else:
         records = dict(child.vaccine_records or {})
-        rec = {"status": update_in.status, "dateCompleted": date_completed}
+        rec = dict(records.get(vax_id) or {})
+        rec["status"] = update_in.status
+        rec["dateCompleted"] = date_completed
         if update_in.reaction is not None:
             rec["reaction"] = update_in.reaction
+            if "batchNumber" in update_in.reaction:
+                rec["batchNumber"] = update_in.reaction["batchNumber"]
+        elif existing_batch:
+            rec["batchNumber"] = existing_batch
         records[vax_id] = rec
         child.vaccine_records = records
         updated_child = child_repo.update(child)

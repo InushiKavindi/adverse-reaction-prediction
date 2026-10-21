@@ -103,6 +103,10 @@ class MongoChildRepository(IChildRepository):
         return child
 
     def update_vaccine_status(self, child_id: int, vax_id: str, status: str, date_completed: Optional[str] = None, reaction: Optional[Dict[str, Any]] = None) -> Optional[Child]:
+        child = self.get_by_id(child_id)
+        existing_rec = ((child.vaccine_records or {}) if child else {}).get(vax_id, {})
+        existing_batch = (existing_rec.get("reaction") or {}).get("batchNumber") or existing_rec.get("batchNumber")
+
         key = f"vaccine_records.{vax_id}"
         update_doc = {
             f"{key}.status": status,
@@ -110,9 +114,16 @@ class MongoChildRepository(IChildRepository):
             "updated_at": datetime.now(timezone.utc)
         }
         if reaction is not None:
+            if "batchNumber" not in reaction and existing_batch:
+                reaction["batchNumber"] = existing_batch
             update_doc[f"{key}.reaction"] = reaction
+            if "batchNumber" in reaction:
+                update_doc[f"{key}.batchNumber"] = reaction["batchNumber"]
             if "scheduledDate" in reaction:
                 update_doc[f"{key}.dueDate"] = reaction["scheduledDate"]
+        elif existing_batch:
+            update_doc[f"{key}.batchNumber"] = existing_batch
+
         self.collection.update_one({"id": child_id}, {"$set": update_doc})
         return self.get_by_id(child_id)
 

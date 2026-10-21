@@ -34,12 +34,21 @@ class SQLAlchemyChildRepository(IChildRepository):
             return None
         records = dict(child.vaccine_records or {})
         rec = dict(records.get(vax_id) or {})
+        existing_batch = (rec.get("reaction") or {}).get("batchNumber") or rec.get("batchNumber")
+
         rec["status"] = status
         rec["dateCompleted"] = date_completed
         if reaction is not None:
+            if "batchNumber" not in reaction and existing_batch:
+                reaction["batchNumber"] = existing_batch
             rec["reaction"] = reaction
+            if "batchNumber" in reaction:
+                rec["batchNumber"] = reaction["batchNumber"]
             if "scheduledDate" in reaction:
                 rec["dueDate"] = reaction["scheduledDate"]
+        elif existing_batch:
+            rec["batchNumber"] = existing_batch
+
         records[vax_id] = rec
         child.vaccine_records = records
         child.updated_at = datetime.now(timezone.utc)
