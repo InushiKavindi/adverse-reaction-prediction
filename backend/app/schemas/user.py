@@ -8,7 +8,7 @@ class UserRole(str, Enum):
     PARENT = "parent"
 
 class UserBase(BaseModel):
-    username: str = Field(..., min_length=3, max_length=50, example="sarah_parent")
+    username: Optional[str] = Field(None, min_length=3, max_length=50, example="sarah_parent")
     email: EmailStr = Field(..., example="sarah@example.com")
     full_name: Optional[str] = Field(None, example="Sarah Connor")
     role: UserRole = Field(default=UserRole.PARENT, example=UserRole.PARENT)
@@ -17,7 +17,7 @@ class UserCreate(UserBase):
     password: str = Field(..., min_length=6, max_length=100, example="SecurePass123!")
 
 class UserLogin(BaseModel):
-    username: str = Field(..., example="sarah_parent")
+    username: str = Field(..., example="sarah@example.com")
     password: str = Field(..., example="SecurePass123!")
 
 class UserUpdate(BaseModel):

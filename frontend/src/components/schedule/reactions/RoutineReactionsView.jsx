@@ -167,9 +167,9 @@ export default function RoutineReactionsView({
                           <span className="text-slate-400 italic text-[11px]">Not applicable</span>
                         ) : item.onset_hours !== null && item.onset_hours !== undefined ? (
                           <span className="font-extrabold text-slate-800 text-[11px]">
-                            {item.onset_hours < 24
-                              ? `~${Number(item.onset_hours).toFixed(1)} hrs post-vax`
-                              : `~${Number(item.onset_hours).toFixed(1)} hrs (~${(item.onset_hours / 24).toFixed(1)} days)`}
+                            {Math.round(item.onset_hours) < 24
+                              ? `~${Math.round(item.onset_hours)} hrs post-vax`
+                              : `~${Math.round(item.onset_hours)} hrs (~${Math.round(Math.round(item.onset_hours) / 24)} ${Math.round(Math.round(item.onset_hours) / 24) === 1 ? "day" : "days"})`}
                           </span>
                         ) : (
                           <span className="text-slate-400 italic text-[11px]">Immediate / 24h</span>

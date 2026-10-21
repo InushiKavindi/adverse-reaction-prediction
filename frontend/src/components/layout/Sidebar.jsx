@@ -90,7 +90,7 @@ export default function Sidebar({ currentPage, setCurrentPage, mobileOpen, setMo
                   onClick={() => handleNavClick(item.id)}
                   className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-sm font-semibold transition-all ${
                     isActive
-                      ? "bg-[#0284c7] text-white shadow-md shadow-sky-200"
+                      ? "bg-[#0793E8] text-white shadow-md shadow-sky-200"
                       : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
                   }`}
                 >
@@ -163,7 +163,7 @@ export default function Sidebar({ currentPage, setCurrentPage, mobileOpen, setMo
           ) : (
             <button
               onClick={openLogin}
-              className="w-full py-2.5 px-4 bg-sky-500 hover:bg-sky-600 text-white font-semibold text-xs rounded-xl shadow-sm transition"
+              className="w-full py-2.5 px-4 bg-[#0793E8] hover:bg-[#0682cf] text-white font-semibold text-xs rounded-xl shadow-sm transition"
             >
               Sign In to Your Account
             </button>

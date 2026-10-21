@@ -17,7 +17,16 @@ class UserService:
 
     def register_user(self, user_in: UserCreate) -> User:
         """Register a new user with validation and auto-admin logic for first user."""
-        if self.user_repo.get_by_username(user_in.username):
+        username = user_in.username
+        if not username:
+            base = user_in.email.split("@")[0]
+            candidate = base
+            counter = 1
+            while self.user_repo.get_by_username(candidate):
+                candidate = f"{base}{counter}"
+                counter += 1
+            username = candidate
+        elif self.user_repo.get_by_username(username):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Username is already taken"
@@ -36,10 +45,10 @@ class UserService:
 
         hashed_pwd = self.password_hasher.hash(user_in.password)
         new_user = User(
-            username=user_in.username,
+            username=username,
             email=user_in.email,
             hashed_password=hashed_pwd,
-            full_name=user_in.full_name,
+            full_name=user_in.full_name or username,
             role=assigned_role,
             is_active=True
         )

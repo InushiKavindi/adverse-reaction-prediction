@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useChild } from "../../context/ChildContext";
-import AddChildModal from "./AddChildModal";
 import EditChildModal from "./EditChildModal";
 import { Card } from "../ui/card";
 import { Button } from "../ui/button";
@@ -26,17 +25,8 @@ import {
 
 export default function ProfileView() {
   const { user, logout, openLogin } = useAuth();
-  const { childrenList, activeChild, setActiveChildId, addChild } = useChild();
-
-  const { isAddChildModalOpen, setIsAddChildModalOpen } = useChild();
-  const [isAddingLocal, setIsAddingLocal] = useState(false);
+  const { childrenList, activeChild, setActiveChildId, addChild, setIsAddChildModalOpen } = useChild();
   const [editingChild, setEditingChild] = useState(null);
-
-  const isAddingChild = isAddingLocal || isAddChildModalOpen;
-  const setIsAddingChild = (val) => {
-    setIsAddingLocal(val);
-    if (setIsAddChildModalOpen) setIsAddChildModalOpen(val);
-  };
 
   return (
     <div className="space-y-6">
@@ -125,8 +115,8 @@ export default function ProfileView() {
               </div>
 
               <Button
-                onClick={() => setIsAddingChild(true)}
-                className="h-auto py-2 px-3 bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+                onClick={() => setIsAddChildModalOpen(true)}
+                className="h-auto py-2 px-3 bg-[#0793E8] hover:bg-[#0682cf] text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Add Child</span>
@@ -145,7 +135,7 @@ export default function ProfileView() {
                     onClick={() => setActiveChildId(child.id)}
                     className={`p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer ${
                       isActive
-                        ? "bg-sky-50/70 border-sky-300 ring-2 ring-sky-200/50 shadow-xs"
+                        ? "bg-[#0793E8]/5 border-[#0793E8] ring-2 ring-[#0793E8]/30 shadow-xs"
                         : "bg-slate-50/50 border-slate-200 hover:border-slate-300 hover:bg-slate-50"
                     }`}
                   >
@@ -155,7 +145,7 @@ export default function ProfileView() {
                         <div
                           className={`w-11 h-11 rounded-2xl flex items-center justify-center font-bold text-sm shrink-0 ${
                             isActive
-                              ? "bg-sky-500 text-white shadow-xs"
+                              ? "bg-[#0793E8] text-white shadow-xs"
                               : "bg-slate-200 text-slate-600"
                           }`}
                         >
@@ -166,7 +156,7 @@ export default function ProfileView() {
                           <div className="flex items-center gap-2 flex-wrap">
                             <h4 className="text-sm font-bold text-slate-900">{child.name}</h4>
                             {isActive && (
-                              <Badge variant="sky" className="text-[10px] font-extrabold px-2 py-0.5">
+                              <Badge className="text-[10px] font-extrabold px-2 py-0.5 border-[#0793E8]/30 bg-[#0793E8]/10 text-[#0793E8]">
                                 Active Profile
                               </Badge>
                             )}
@@ -185,7 +175,7 @@ export default function ProfileView() {
                           e.stopPropagation();
                           setEditingChild(child);
                         }}
-                        className="h-auto p-1.5 sm:px-2.5 sm:py-1.5 bg-white hover:bg-sky-50 text-slate-600 hover:text-sky-600 border-slate-200 hover:border-sky-300 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer shadow-2xs shrink-0"
+                        className="h-auto p-1.5 sm:px-2.5 sm:py-1.5 bg-white hover:bg-sky-50 text-slate-600 hover:text-[#0793E8] border-slate-200 hover:border-[#0793E8]/40 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer shadow-2xs shrink-0"
                         title="Edit child profile and health notes"
                       >
                         <Pencil className="w-3.5 h-3.5" />
@@ -253,11 +243,6 @@ export default function ProfileView() {
         </div>
       </div>
 
-      {/* Add Child Modal */}
-      <AddChildModal
-        isOpen={isAddingChild}
-        onClose={() => setIsAddingChild(false)}
-      />
 
       {/* Edit Child Modal */}
       <EditChildModal

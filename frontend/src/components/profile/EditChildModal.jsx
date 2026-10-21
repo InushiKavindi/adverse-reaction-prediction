@@ -103,8 +103,18 @@ export default function EditChildModal({ isOpen, child, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-      <Card className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border-slate-100 max-h-[92vh] flex flex-col">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget && onClose) {
+          onClose();
+        }
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200 cursor-pointer"
+    >
+      <Card
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border-slate-100 max-h-[92vh] flex flex-col cursor-default"
+      >
         {/* Modal Header */}
         <div className="flex items-center justify-between pb-3.5 border-b border-slate-100 shrink-0">
           <div className="flex items-center gap-3">
@@ -121,6 +131,7 @@ export default function EditChildModal({ isOpen, child, onClose }) {
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="p-1.5 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer transition"
           >

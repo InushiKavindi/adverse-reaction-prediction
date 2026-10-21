@@ -180,15 +180,15 @@ export function LogReactionsModal({
                           type="number"
                           min="0"
                           max="720"
-                          step="1"
+                          step="any"
                           value={symptomOnsets[sym.id] !== undefined ? symptomOnsets[sym.id] : ""}
                           onChange={(e) => onOnsetChange(sym.id, e.target.value)}
                           onKeyDown={(e) => {
-                            if (e.key === "." || e.key === "e" || e.key === "-" || e.key === "+") {
+                            if (e.key === "e" || e.key === "E" || e.key === "-" || e.key === "+") {
                               e.preventDefault();
                             }
                           }}
-                          placeholder="5 hours"
+                          placeholder="e.g. 1.3 or 5 hours"
                           className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50/80 border border-slate-200 rounded-xl focus:bg-white focus:border-sky-400 outline-none transition text-slate-800 placeholder:text-slate-400"
                         />
                       </div>

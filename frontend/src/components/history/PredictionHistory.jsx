@@ -531,7 +531,7 @@ export default function PredictionHistory({ onNewScreening }) {
                             </span>
                             {s.onset_hours !== null && s.onset_hours !== undefined && (
                               <span className="text-slate-500 text-[10px] font-medium border-l border-sky-200 pl-1.5">
-                                ~{Number(s.onset_hours).toFixed(1)} hrs
+                                ~{Math.round(s.onset_hours)} hrs
                               </span>
                             )}
                           </span>
@@ -726,7 +726,7 @@ export default function PredictionHistory({ onNewScreening }) {
                             </span>
                             {item.onset_hours !== null && item.onset_hours !== undefined ? (
                               <span className="font-bold text-sky-700 bg-white px-2.5 py-1 rounded-lg border border-slate-200 shadow-2xs text-[11px]">
-                                Onset: ~{Number(item.onset_hours).toFixed(1)} hrs
+                                Onset: ~{Math.round(item.onset_hours)} hrs
                               </span>
                             ) : (
                               <span className="text-slate-400 text-[11px]">—</span>

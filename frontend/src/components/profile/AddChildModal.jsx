@@ -88,13 +88,24 @@ export default function AddChildModal({ isOpen, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-      <Card className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border-slate-100 max-h-[90vh] overflow-y-auto">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget && onClose) {
+          onClose();
+        }
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200 cursor-pointer"
+    >
+      <Card
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border-slate-100 max-h-[90vh] overflow-y-auto cursor-default"
+      >
         <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4 sticky top-0 bg-white z-10">
           <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
             <Baby className="w-5 h-5 text-sky-600" /> Add New Child Profile
           </h3>
           <button
+            type="button"
             onClick={onClose}
             className="p-1 rounded-full text-slate-400 hover:text-slate-600 cursor-pointer transition"
           >

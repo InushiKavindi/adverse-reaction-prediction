@@ -266,8 +266,13 @@ export default function VaccineDetailView({ vaccine: initialVaccine, onBack, onP
   };
 
   const handleOnsetChange = (id, val) => {
-    const cleanVal = val === "" ? "" : String(Math.max(0, parseInt(val, 10) || 0));
-    setLogSymptomOnsets((prev) => ({ ...prev, [id]: cleanVal }));
+    if (val === "") {
+      setLogSymptomOnsets((prev) => ({ ...prev, [id]: "" }));
+      return;
+    }
+    if (/^\d*\.?\d*$/.test(val)) {
+      setLogSymptomOnsets((prev) => ({ ...prev, [id]: val }));
+    }
   };
 
   const handleLogReactionsSubmit = async (e) => {
@@ -275,12 +280,22 @@ export default function VaccineDetailView({ vaccine: initialVaccine, onBack, onP
     const todayStr = new Date().toISOString().split("T")[0];
     const isNoReaction = logSelectedSymptoms.includes("no_reaction") || logSelectedSymptoms.length === 0;
 
+    const cleanedOnsets = {};
+    Object.entries(logSymptomOnsets || {}).forEach(([symId, onsetVal]) => {
+      if (onsetVal !== "" && onsetVal !== null && onsetVal !== undefined) {
+        const num = parseFloat(onsetVal);
+        if (!isNaN(num) && num >= 0) {
+          cleanedOnsets[symId] = String(onsetVal).trim();
+        }
+      }
+    });
+
     const reactionPayload = {
       hasReaction: !isNoReaction,
       currentIllness: vaccine.reaction?.currentIllness || activeChild?.currentIllness || "None",
       currentMedication: vaccine.reaction?.currentMedication || activeChild?.currentMedication || "None",
       symptoms: isNoReaction ? ["no_reaction"] : logSelectedSymptoms,
-      onsets: logSymptomOnsets,
+      onsets: cleanedOnsets,
       otherDescription: logOtherDesc || null,
       recordedAt: new Date().toISOString()
     };
