@@ -25,7 +25,8 @@ from backend.app.services.auth_service import AuthService
 from backend.app.services.ml_service import (
     PredictionService,
     default_inference_engine,
-    default_risk_evaluator
+    default_risk_evaluator,
+    default_model_loader
 )
 
 oauth2_scheme = OAuth2PasswordBearer(
@@ -89,6 +90,10 @@ def get_prediction_service(
         risk_evaluator=default_risk_evaluator,
         prediction_repo=repo
     )
+
+def get_model_loader():
+    """Return the default model loader for XAI access to raw models."""
+    return default_model_loader
 
 def get_current_user(
     token: Optional[str] = Depends(oauth2_scheme),

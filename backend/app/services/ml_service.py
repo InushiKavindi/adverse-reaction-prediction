@@ -1,5 +1,6 @@
 import os
 import sys
+import logging
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 import joblib
@@ -71,6 +72,10 @@ class JoblibModelLoader(IModelLoader):
                 raise FileNotFoundError(f"No onset model found at {self.onset_path}")
 
         return self._symptom_model, self._onset_model
+
+    def get_raw_models(self) -> Tuple[Any, Any]:
+        """Return the loaded model objects for XAI inspection."""
+        return self.load_models()
 
     def is_ready(self) -> bool:
         try:
@@ -153,7 +158,9 @@ class PredictionService(IPredictionService):
         self, 
         patient: PatientInput, 
         user_id: Optional[int] = None,
-        save_record: bool = True
+        save_record: bool = True,
+        include_explanation: bool = False,
+        model_loader: Optional[IModelLoader] = None,
     ) -> PredictionResponse:
         # 1. Format input DataFrame with clinical normalization
         vax_type = normalize_vaccine_type(patient.vaccine_type)
@@ -255,6 +262,14 @@ class PredictionService(IPredictionService):
             created_id = saved.id
             created_at = saved.created_at
 
+        # 6. Generate XAI explanation if requested
+        explanation = None
+        if include_explanation:
+            explanation = self._generate_explanation(
+                model_loader, df_input, probabilities_dict, onset_dict,
+                active_positive_symptoms, risk_level
+            )
+
         return PredictionResponse(
             id=created_id,
             patient_identifier=patient.patient_identifier,
@@ -264,8 +279,56 @@ class PredictionService(IPredictionService):
             symptoms=items,
             raw_probabilities=probabilities_dict,
             raw_onsets=onset_dict,
-            created_at=created_at
+            created_at=created_at,
+            explanation=explanation,
         )
+
+    def _generate_explanation(
+        self,
+        model_loader: Optional[IModelLoader],
+        df_input: pd.DataFrame,
+        probabilities_dict: Dict[str, float],
+        onset_dict: Dict[str, float],
+        active_symptoms: List[str],
+        risk_level: str,
+    ) -> Optional[Dict[str, Any]]:
+        """Generate unified XAI explanation from both models."""
+        xai_logger = logging.getLogger(__name__)
+        try:
+            from backend.app.services.xai_service import generate_unified_explanation
+            from backend.app.services.explanation_generator import generate_full_explanation
+
+            if model_loader is None:
+                xai_logger.warning("No model_loader provided for XAI explanation")
+                return None
+
+            symptom_model, onset_model = model_loader.get_raw_models()
+
+            # Generate raw XAI results
+            xai_results = generate_unified_explanation(
+                symptom_model=symptom_model,
+                onset_models=onset_model if isinstance(onset_model, dict) else {},
+                input_df=df_input,
+                probabilities=probabilities_dict,
+                onset_dict=onset_dict,
+                target_cols=TARGET_COLS,
+                active_symptoms=active_symptoms,
+            )
+
+            # Transform into parent-friendly explanation
+            explanation = generate_full_explanation(
+                xai_results=xai_results,
+                probabilities=probabilities_dict,
+                onset_dict=onset_dict,
+                active_symptoms=active_symptoms,
+                risk_level=risk_level,
+            )
+
+            return explanation
+
+        except Exception as e:
+            xai_logger.error(f"XAI explanation generation failed: {e}")
+            return None
 
 # Default global instances for convenience / backward compatibility
 default_model_loader = JoblibModelLoader()

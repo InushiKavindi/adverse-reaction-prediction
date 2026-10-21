@@ -252,9 +252,14 @@ export const api = {
   },
 
   // --- PREDICTIONS & ONSET FORECASTS ---
-  async predict(patientInput, saveRecord = false) {
+  async predict(patientInput, saveRecord = false, includeExplanation = false) {
     try {
-      const url = `${API_BASE_URL}/predict${saveRecord ? "?save_record=true" : "?save_record=false"}`;
+      const params = new URLSearchParams();
+      params.set("save_record", saveRecord ? "true" : "false");
+      if (includeExplanation) {
+        params.set("include_explanation", "true");
+      }
+      const url = `${API_BASE_URL}/predict?${params.toString()}`;
       const response = await fetch(url, {
         method: "POST",
         headers: getAuthHeaders(),

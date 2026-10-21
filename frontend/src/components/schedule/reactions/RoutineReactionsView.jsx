@@ -8,6 +8,7 @@ import {
 import { Card, CardTitle, CardDescription } from "../../ui/card";
 import { Button } from "../../ui/button";
 import { Badge } from "../../ui/badge";
+import ForecastExplanation from "./ForecastExplanation";
 
 export default function RoutineReactionsView({
   vaccine,
@@ -17,7 +18,7 @@ export default function RoutineReactionsView({
   fetchModelPrediction
 }) {
   return (
-    <>
+    <div className="space-y-4">
       {/* Main Card: Trained ML Model Predictions */}
       <Card className="bg-white border-slate-100 rounded-3xl p-4 sm:p-6 shadow-xs space-y-4">
         {/* Header: Title */}
@@ -182,6 +183,16 @@ export default function RoutineReactionsView({
           </div>
         )}
       </Card>
-    </>
+
+      {/* Unified Parent-Friendly XAI Explanation */}
+      {(modelPrediction || loadingPrediction) && (
+        <ForecastExplanation
+          explanation={modelPrediction?.explanation}
+          modelPrediction={modelPrediction}
+          loading={loadingPrediction}
+          onRetry={fetchModelPrediction}
+        />
+      )}
+    </div>
   );
 }

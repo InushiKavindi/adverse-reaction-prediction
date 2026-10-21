@@ -13,7 +13,8 @@ from backend.app.services.dependencies import (
     get_prediction_service,
     get_prediction_repository,
     get_current_user,
-    get_optional_current_user
+    get_optional_current_user,
+    get_model_loader
 )
 
 router = APIRouter(prefix="/predict", tags=["Predictions"])
@@ -22,6 +23,7 @@ router = APIRouter(prefix="/predict", tags=["Predictions"])
 def predict_reaction(
     patient: PatientInput,
     save_record: bool = True,
+    include_explanation: bool = False,
     prediction_service: PredictionService = Depends(get_prediction_service),
     current_user: Optional[User] = Depends(get_optional_current_user)
 ):
@@ -30,9 +32,18 @@ def predict_reaction(
     
     If an authenticated user submits the request, the record is automatically saved
     to their clinical prediction history (unless save_record=False).
+    
+    Set include_explanation=true to generate a parent-friendly XAI explanation.
     """
+    from backend.app.services.ml_service import default_model_loader
     user_id = current_user.id if current_user else None
-    return prediction_service.predict_and_record(patient=patient, user_id=user_id, save_record=save_record)
+    return prediction_service.predict_and_record(
+        patient=patient,
+        user_id=user_id,
+        save_record=save_record,
+        include_explanation=include_explanation,
+        model_loader=default_model_loader if include_explanation else None,
+    )
 
 @router.get("/history", response_model=List[PredictionRecordResponse])
 def get_prediction_history(

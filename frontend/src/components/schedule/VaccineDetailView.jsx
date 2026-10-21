@@ -104,7 +104,7 @@ export default function VaccineDetailView({ vaccine: initialVaccine, onBack, onP
     };
 
     try {
-      const res = await api.predict(payload, false);
+      const res = await api.predict(payload, false, true);
       if (res.success && res.data) {
         setModelPrediction(res.data);
       } else {

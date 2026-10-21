@@ -9,9 +9,10 @@ import {
   ShieldCheck,
   CheckCircle2
 } from "lucide-react";
-import { Card, CardTitle, CardDescription } from "../../ui/card";
+import { Card, CardTitle } from "../../ui/card";
 import { Button } from "../../ui/button";
 import { Badge } from "../../ui/badge";
+import ForecastExplanation from "./ForecastExplanation";
 
 export default function Bcg2ReactionsView({
   vaccine,
@@ -223,6 +224,16 @@ export default function Bcg2ReactionsView({
         )}
       </Card>
 
+      {/* Unified Parent-Friendly XAI Explanation */}
+      {(activeBcg2Prediction || isBcg2Loading) && (
+        <ForecastExplanation
+          explanation={activeBcg2Prediction?.explanation}
+          modelPrediction={activeBcg2Prediction}
+          loading={isBcg2Loading}
+          onRetry={fetchModelPrediction}
+        />
+      )}
+
       {/* BCG Scar Formation Assessment (Week 6 – 12) */}
       <Card className="bg-white border-slate-100 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xs space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -306,32 +317,6 @@ export default function Bcg2ReactionsView({
               No scar visible after 6–12 weeks. Clinical protocol advises BCG 2nd dose revaccination.
             </p>
           </button>
-        </div>
-      </Card>
-
-      {/* BCG2 Revaccination Clinical Care & Guidance Card */}
-      <Card className="bg-white border-slate-100 rounded-2xl p-4 sm:p-5 shadow-xs space-y-3">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-xl bg-pink-100 text-pink-700 flex items-center justify-center font-bold shrink-0">
-            <HeartPulse className="w-4 h-4" />
-          </div>
-          <div>
-            <CardTitle className="text-sm sm:text-base font-bold text-slate-900">
-              BCG 2nd Dose Care Guidelines & What to Expect
-            </CardTitle>
-            <CardDescription className="text-[11px] text-slate-400">
-              National Ministry of Health & WHO revaccination management
-            </CardDescription>
-          </div>
-        </div>
-
-        <div className="text-[11px] sm:text-xs text-slate-600 space-y-2">
-          <ul className="list-disc pl-4 space-y-1.5 text-slate-600">
-            <li><strong className="text-slate-800">Injection site:</strong> Administered intradermally on the right upper arm, just like the birth dose.</li>
-            <li><strong className="text-slate-800">Second papule formation:</strong> A small papule will develop within 2–4 weeks and form a scar. Observe the site weekly.</li>
-            <li><strong className="text-slate-800">Symptom comfort:</strong> If mild tenderness or slight low-grade fever occurs within the predicted onset window, keep baby hydrated and apply a cool, damp cloth.</li>
-            <li><strong className="text-slate-800">Follow-up check:</strong> Recheck scar formation at 6–12 weeks following this 2nd dose to verify established cellular immunity.</li>
-          </ul>
         </div>
       </Card>
     </div>
