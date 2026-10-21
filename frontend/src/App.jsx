@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { AuthProvider } from "./context/AuthContext";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ChildProvider, useChild } from "./context/ChildContext";
 import Sidebar from "./components/layout/Sidebar";
 import TopHeader from "./components/layout/TopHeader";
@@ -115,7 +115,6 @@ function MainLayout() {
         setMobileOpen={setMobileOpen}
       />
 
-      <AuthModal />
       <AddChildModal
         isOpen={isAddChildModalOpen}
         onClose={() => setIsAddChildModalOpen(false)}
@@ -124,12 +123,21 @@ function MainLayout() {
   );
 }
 
+function AppContent() {
+  const { user } = useAuth();
+
+  if (!user) {
+    return <AuthModal />;
+  }
+
+  return <MainLayout />;
+}
 
 export default function App() {
   return (
     <AuthProvider>
       <ChildProvider>
-        <MainLayout />
+        <AppContent />
       </ChildProvider>
     </AuthProvider>
   );

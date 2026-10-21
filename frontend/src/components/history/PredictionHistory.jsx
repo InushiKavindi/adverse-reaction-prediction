@@ -311,41 +311,13 @@ export default function PredictionHistory({ onNewScreening }) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex flex-wrap items-center gap-2 mb-2">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-pink-50 border border-pink-200 text-pink-600 rounded-full text-xs font-bold">
-              <History className="w-3.5 h-3.5" />
-              <span>Audit Trail & Records</span>
-            </div>
-
-            {activeChild && (
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-sky-50 border border-sky-200 text-sky-700 rounded-full text-xs font-bold">
-                <Baby className="w-3.5 h-3.5 text-sky-500" />
-                <span>
-                  Profile: {activeChild.name} ({activeChild.ageMonths !== undefined ? activeChild.ageMonths : activeChild.age_months} mos)
-                </span>
-              </div>
-            )}
-          </div>
-
-          <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-            Prediction History
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-500">
-            Adverse reaction assessments, symptom forecasts with onset times, and logged reactions for each child milestone.
-          </p>
-        </div>
-
-        {onNewScreening && (
-          <button
-            onClick={onNewScreening}
-            className="py-2.5 px-4 bg-[#0284c7] hover:bg-sky-600 text-white font-bold text-xs rounded-full shadow-md shadow-sky-200 transition flex items-center gap-2 self-start sm:self-auto cursor-pointer"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>View Full Vaccine Schedule</span>
-          </button>
-        )}
+      <div>
+        <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+          Prediction History
+        </h2>
+        <p className="text-xs sm:text-sm text-slate-500">
+          Adverse reaction assessments, symptom forecasts with onset times, and logged reactions for each child milestone.
+        </p>
       </div>
 
       {/* Tabs */}

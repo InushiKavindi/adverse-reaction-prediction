@@ -42,10 +42,6 @@ export default function ProfileView() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <div className="inline-flex items-center gap-2 px-3 py-1 bg-sky-50 border border-sky-200 text-sky-600 rounded-full text-xs font-bold mb-2">
-          <User className="w-3.5 h-3.5" />
-          <span>Account & Family Profile</span>
-        </div>
         <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
           Parent & Child Profiles
         </h2>
@@ -176,7 +172,7 @@ export default function ProfileView() {
                             )}
                           </div>
                           <p className="text-xs text-slate-500 mt-0.5">
-                            Age: {child.ageMonths} months • Sex: {child.sex === "M" ? "Male" : "Female"} • Blood: {child.bloodGroup || "O+"}
+                            Age: {child.ageMonths} months • Sex: {child.sex === "M" ? "Male" : "Female"}
                           </p>
                         </div>
                       </div>

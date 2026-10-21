@@ -94,15 +94,11 @@ export default function VaccineSchedule({ onSelectVaccine }) {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="min-w-0">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-pink-50 border border-pink-200 text-[#ff2d78] rounded-full text-xs font-bold mb-2 shadow-2xs">
-            <Sparkles className="w-3.5 h-3.5 text-[#ff2d78]" />
-            <span>National Pediatric Immunization Schedule</span>
-          </div>
           <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight break-words">
             Vaccination Schedule for {activeChild?.name || "Active Child"}
           </h2>
           <p className="text-xs sm:text-sm text-slate-500">
-            Adheres to National Ministry of Health & WHO guidelines for infant & toddler immunization.
+            National Pediatric Immunization Schedule
           </p>
         </div>
 
@@ -119,11 +115,10 @@ export default function VaccineSchedule({ onSelectVaccine }) {
               size="sm"
               variant={activeFilter === btn.id ? "default" : "ghost"}
               onClick={() => setActiveFilter(btn.id)}
-              className={`px-3 py-1.5 text-xs font-bold rounded-xl transition cursor-pointer shrink-0 h-8 ${
-                activeFilter === btn.id
+              className={`px-3 py-1.5 text-xs font-bold rounded-xl transition cursor-pointer shrink-0 h-8 ${activeFilter === btn.id
                   ? "bg-white text-slate-900 shadow-xs hover:bg-white"
                   : "text-slate-500 hover:text-slate-800 hover:bg-slate-200/50"
-              }`}
+                }`}
             >
               {btn.label}
             </Button>
@@ -199,20 +194,18 @@ export default function VaccineSchedule({ onSelectVaccine }) {
                 <div className="flex flex-col items-center shrink-0 w-7 sm:w-10">
                   {/* Top line connecting from previous item */}
                   <div
-                    className={`w-1 rounded-full ${
-                      isFirst ? "bg-transparent h-6 sm:h-7" : "bg-[#ff2d78] h-6 sm:h-7"
-                    }`}
+                    className={`w-1 rounded-full ${isFirst ? "bg-transparent h-6 sm:h-7" : "bg-[#ff2d78] h-6 sm:h-7"
+                      }`}
                   />
 
                   {/* Circular Node Indicator on the line */}
                   <div
-                    className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full border-2 border-white shadow-sm flex items-center justify-center shrink-0 z-10 transition-transform duration-200 ${
-                      isCompleted
+                    className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full border-2 border-white shadow-sm flex items-center justify-center shrink-0 z-10 transition-transform duration-200 ${isCompleted
                         ? "bg-[#0ea5e9] text-white ring-2 ring-sky-200"
                         : isDue
-                        ? "bg-[#0ea5e9] text-white ring-4 ring-sky-300"
-                        : "bg-slate-200 text-slate-400 border-slate-300"
-                    }`}
+                          ? "bg-[#0ea5e9] text-white ring-4 ring-sky-300"
+                          : "bg-slate-200 text-slate-400 border-slate-300"
+                      }`}
                   >
                     {isCompleted ? (
                       <Check className="w-3.5 h-3.5 text-white stroke-[3]" />
@@ -225,9 +218,8 @@ export default function VaccineSchedule({ onSelectVaccine }) {
 
                   {/* Bottom line connecting to next item */}
                   <div
-                    className={`w-1 flex-1 min-h-[36px] rounded-full ${
-                      isLast ? "bg-transparent" : "bg-[#ff2d78]"
-                    }`}
+                    className={`w-1 flex-1 min-h-[36px] rounded-full ${isLast ? "bg-transparent" : "bg-[#ff2d78]"
+                      }`}
                   />
                 </div>
 
@@ -235,15 +227,14 @@ export default function VaccineSchedule({ onSelectVaccine }) {
                 <div className="flex-1 min-w-0 pb-5 sm:pb-6">
                   <Card
                     onClick={() => handleCardClick(item, isClickable)}
-                    className={`rounded-2xl sm:rounded-3xl border transition-all duration-200 p-5 sm:p-6 shadow-xs min-w-0 w-full ${
-                      !isClickable
+                    className={`rounded-2xl sm:rounded-3xl border transition-all duration-200 p-5 sm:p-6 shadow-xs min-w-0 w-full ${!isClickable
                         ? "border-slate-200/80 bg-slate-50/40 opacity-70 cursor-not-allowed select-none"
                         : isDue
-                        ? "border-sky-300 ring-4 ring-sky-100/70 shadow-sm bg-white hover:border-sky-400 hover:shadow-md cursor-pointer active:scale-[0.99]"
-                        : isCompleted
-                        ? "border-pink-100 bg-white hover:border-pink-200 hover:shadow-md cursor-pointer active:scale-[0.99]"
-                        : "border-pink-100 bg-white hover:border-pink-200 hover:shadow-md cursor-pointer active:scale-[0.99]"
-                    }`}
+                          ? "border-sky-300 ring-4 ring-sky-100/70 shadow-sm bg-white hover:border-sky-400 hover:shadow-md cursor-pointer active:scale-[0.99]"
+                          : isCompleted
+                            ? "border-pink-100 bg-white hover:border-pink-200 hover:shadow-md cursor-pointer active:scale-[0.99]"
+                            : "border-pink-100 bg-white hover:border-pink-200 hover:shadow-md cursor-pointer active:scale-[0.99]"
+                      }`}
                   >
                     {/* Top Header: Uppercase Pink Milestone + Status Badge */}
                     <div className="flex items-center justify-between pb-3.5 border-b border-pink-50/90 gap-2">
@@ -263,11 +254,10 @@ export default function VaccineSchedule({ onSelectVaccine }) {
                       ) : isDue ? (
                         <Badge
                           variant="outline"
-                          className={`${
-                            item.id === "vax-bcg2"
+                          className={`${item.id === "vax-bcg2"
                               ? "border-amber-400 bg-amber-50 text-amber-700"
                               : "border-sky-400 bg-sky-50 text-sky-600"
-                          } font-semibold px-3 py-1 text-xs rounded-full gap-1.5 shrink-0`}
+                            } font-semibold px-3 py-1 text-xs rounded-full gap-1.5 shrink-0`}
                         >
                           <AlertCircle className={`w-3.5 h-3.5 ${item.id === "vax-bcg2" ? "text-amber-600" : "text-sky-600"}`} />
                           <span>{item.id === "vax-bcg2" ? "Revaccination Due" : "Due Now"}</span>
@@ -332,10 +322,10 @@ export default function VaccineSchedule({ onSelectVaccine }) {
                         {isCompleted
                           ? "✓ Recorded in child's health journal"
                           : item.id === "vax-bcg2"
-                          ? "⚠️ Revaccination if no scar developed after birth dose"
-                          : isDue
-                          ? "⚠️ Recommended for administration this month"
-                          : "Scheduled milestone"}
+                            ? "⚠️ Revaccination if no scar developed after birth dose"
+                            : isDue
+                              ? "⚠️ Recommended for administration this month"
+                              : "Scheduled milestone"}
                       </span>
 
                       {isClickable ? (
