@@ -182,39 +182,6 @@ export default function RoutineReactionsView({
           </div>
         )}
       </Card>
-
-      {/* Standard Comfort Measures & Clinical Home Care Card */}
-      <Card className="bg-white border-slate-100 rounded-2xl p-4 sm:p-5 shadow-xs space-y-3">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-xl bg-pink-100 text-pink-700 flex items-center justify-center font-bold shrink-0">
-            <HeartPulse className="w-4 h-4" />
-          </div>
-          <div>
-            <CardTitle className="text-sm sm:text-base font-bold text-slate-900">
-              Pediatric Care Guidelines & Comfort Measures
-            </CardTitle>
-            <CardDescription className="text-[11px] text-slate-400">
-              Recommended post-immunization care from Ministry of Health & WHO
-            </CardDescription>
-          </div>
-        </div>
-
-        <div className="p-3 bg-pink-50/70 border border-pink-100 rounded-xl">
-          <p className="text-xs sm:text-sm font-semibold text-pink-900 leading-relaxed">
-            {vaccine.expectedReactions}
-          </p>
-        </div>
-
-        <div className="text-[11px] sm:text-xs text-slate-600 space-y-1.5">
-          <p className="font-semibold text-slate-700">Recommended Comfort Measures:</p>
-          <ul className="list-disc pl-4 space-y-1 text-slate-500">
-            <li>Apply cool, damp cloth to injection area to soothe localized tenderness.</li>
-            <li>Offer plenty of fluids and maintain a comfortable room temperature.</li>
-            <li>Administer infant paracetamol only if advised by your medical practitioner.</li>
-            <li>Seek immediate medical advice if high fever (&gt;39°C) or persistent crying lasts over 24 hours.</li>
-          </ul>
-        </div>
-      </Card>
     </>
   );
 }
