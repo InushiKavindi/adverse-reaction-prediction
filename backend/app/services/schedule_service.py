@@ -7,17 +7,24 @@ NATIONAL_VACCINE_DEFINITIONS = [
     {
         "id": "vax-1",
         "milestone": "BIRTH",
-        "ageRange": "0 - 2 weeks",
+        "ageRange": "Birth",
         "targetAgeMonths": 0,
         "vaccineName": "BCG",
-        "fullVaccineName": "BCG1 (Bacillus Calmette-Guérin)",
-        "route": "Upper Arm Injection",
-        "fullRoute": "Intradermal (Right upper arm)",
-        "diseases": "Tuberculosis (Miliary TB & Tubercular Meningitis)",
+        "fullVaccineName": "BCG",
+        "route": "Intradermal (into the skin)",
+        "fullRoute": "Intradermal (into the skin)",
+        "diseases": "Tuberculosis (TB), particularly severe childhood TB such as TB meningitis and disseminated TB",
         "expectedReactions": "Small papule after 2-4 weeks developing into tiny ulcer, heals with scar.",
         "severityLevel": "Normal / Expected",
         "batchNumber": "BCG-2024-A9",
-        "dosage": "0.05 ml (infant < 1 month) / 0.1 ml"
+        "dosage": "0.05 ml (infant < 1 month) / 0.1 ml",
+        "vaccines": [
+            {
+                "name": "BCG",
+                "route": "Intradermal (into the skin)",
+                "diseases": "Tuberculosis (TB), particularly severe childhood TB such as TB meningitis and disseminated TB"
+            }
+        ]
     },
     {
         "id": "vax-bcg2",
@@ -26,133 +33,226 @@ NATIONAL_VACCINE_DEFINITIONS = [
         "targetAgeMonths": 2,
         "vaccineName": "BCG 2 (Revaccination)",
         "fullVaccineName": "BCG 2nd Dose (Revaccination if Scar Absent)",
-        "route": "Upper Arm Injection",
-        "fullRoute": "Intradermal (Right upper arm)",
-        "diseases": "Tuberculosis (Miliary TB & Tubercular Meningitis revaccination)",
+        "route": "Intradermal (into the skin)",
+        "fullRoute": "Intradermal (into the skin)",
+        "diseases": "Tuberculosis (TB), particularly severe childhood TB such as TB meningitis and disseminated TB (revaccination)",
         "expectedReactions": "Mild fever, localized redness or swelling, papule formation.",
         "severityLevel": "Low to Moderate Risk",
         "batchNumber": "BCG-2024-B2",
-        "dosage": "0.1 ml Intradermal"
+        "dosage": "0.1 ml Intradermal",
+        "vaccines": [
+            {
+                "name": "BCG 2 (Revaccination)",
+                "route": "Intradermal (into the skin)",
+                "diseases": "Tuberculosis (TB), particularly severe childhood TB such as TB meningitis and disseminated TB (revaccination)"
+            }
+        ]
     },
     {
         "id": "vax-2",
         "milestone": "2 MONTHS",
-        "ageRange": "8 weeks",
+        "ageRange": "2 months",
         "targetAgeMonths": 2,
-        "vaccineName": "OPV 1 + Pentavalent 1",
-        "fullVaccineName": "Pentavalent 1, OPV 1 & IPV",
-        "route": "Thigh Injection & Oral Drops",
-        "fullRoute": "Intramuscular & Oral Drops",
-        "diseases": "Diphtheria, Tetanus, Pertussis, Hepatitis B, Hib + Polio",
+        "vaccineName": "Pentavalent 1 + OPV 1",
+        "fullVaccineName": "Pentavalent 1 & OPV 1",
+        "route": "Pentavalent 1: Intramuscular (into a muscle) | OPV 1: Oral (by mouth)",
+        "fullRoute": "Pentavalent 1: Intramuscular (into a muscle) | OPV 1: Oral (by mouth)",
+        "diseases": "Pentavalent 1: Diphtheria, tetanus, pertussis (whooping cough), hepatitis B, and Haemophilus influenzae type b (Hib) infections | OPV 1: Poliomyelitis (polio)",
         "expectedReactions": "Mild fever (38°C), soreness, redness at injection site within 6-12 hours.",
         "severityLevel": "Low Risk",
         "batchNumber": "PNT-8812-B",
-        "dosage": "0.5 ml IM + 2 drops oral OPV"
+        "dosage": "0.5 ml IM + 2 drops oral OPV",
+        "vaccines": [
+            {
+                "name": "Pentavalent 1",
+                "route": "Intramuscular (into a muscle)",
+                "diseases": "Diphtheria, tetanus, pertussis (whooping cough), hepatitis B, and Haemophilus influenzae type b (Hib) infections"
+            },
+            {
+                "name": "OPV 1",
+                "route": "Oral (by mouth)",
+                "diseases": "Poliomyelitis (polio)"
+            }
+        ]
     },
     {
         "id": "vax-3",
         "milestone": "4 MONTHS",
-        "ageRange": "16 weeks",
+        "ageRange": "4 months",
         "targetAgeMonths": 4,
-        "vaccineName": "OPV 2 + IPV + Pentavalent 2",
-        "fullVaccineName": "Pentavalent 2, OPV 2 & IPV Booster",
-        "route": "Thigh Injection & Oral Drops",
-        "fullRoute": "Intramuscular & Inactivated Polio",
-        "diseases": "Diphtheria, Pertussis, Tetanus, Hep B, Hib & Polio Booster",
+        "vaccineName": "Pentavalent 2 + OPV 2 + IPV",
+        "fullVaccineName": "Pentavalent 2, OPV 2 & IPV",
+        "route": "Pentavalent 2: Intramuscular | OPV 2: Oral | IPV: Intradermal",
+        "fullRoute": "Pentavalent 2: Intramuscular | OPV 2: Oral | IPV: Intradermal",
+        "diseases": "Pentavalent 2: Diphtheria, tetanus, pertussis, hepatitis B, and Hib infections | OPV 2 & IPV: Poliomyelitis (polio)",
         "expectedReactions": "Low-grade fever in 8-12 hours, mild swelling. Manageable with paracetamol if advised.",
         "severityLevel": "Low Risk",
         "batchNumber": "PNT-9043-C",
-        "dosage": "0.5 ml IM + 2 drops oral OPV + 0.5 ml IPV"
+        "dosage": "0.5 ml IM + 2 drops oral OPV + 0.5 ml IPV",
+        "vaccines": [
+            {
+                "name": "Pentavalent 2",
+                "route": "Intramuscular",
+                "diseases": "Diphtheria, tetanus, pertussis, hepatitis B, and Hib infections"
+            },
+            {
+                "name": "OPV 2",
+                "route": "Oral",
+                "diseases": "Poliomyelitis (polio)"
+            },
+            {
+                "name": "IPV",
+                "route": "Intradermal",
+                "diseases": "Poliomyelitis (polio)"
+            }
+        ]
     },
     {
         "id": "vax-4",
         "milestone": "6 MONTHS",
-        "ageRange": "24 weeks",
+        "ageRange": "6 months",
         "targetAgeMonths": 6,
-        "vaccineName": "OPV 3 + Pentavalent 3",
+        "vaccineName": "Pentavalent 3 + OPV 3",
         "fullVaccineName": "Pentavalent 3 & OPV 3",
-        "route": "Thigh Injection & Oral Drops",
-        "fullRoute": "Intramuscular & Oral Drops",
-        "diseases": "Diphtheria, Pertussis, Tetanus, Hep B, Hib & Polio 3",
+        "route": "Pentavalent 3: Intramuscular | OPV 3: Oral",
+        "fullRoute": "Pentavalent 3: Intramuscular | OPV 3: Oral",
+        "diseases": "Pentavalent 3: Diphtheria, tetanus, pertussis, hepatitis B, and Hib infections | OPV 3: Poliomyelitis (polio)",
         "expectedReactions": "Slight tenderness at injection site, irritability lasting <24 hours.",
         "severityLevel": "Low Risk",
         "batchNumber": "PNT-9921-A",
-        "dosage": "0.5 ml IM + 2 drops oral OPV"
+        "dosage": "0.5 ml IM + 2 drops oral OPV",
+        "vaccines": [
+            {
+                "name": "Pentavalent 3",
+                "route": "Intramuscular",
+                "diseases": "Diphtheria, tetanus, pertussis, hepatitis B, and Hib infections"
+            },
+            {
+                "name": "OPV 3",
+                "route": "Oral",
+                "diseases": "Poliomyelitis (polio)"
+            }
+        ]
     },
     {
         "id": "vax-5",
         "milestone": "9 MONTHS",
-        "ageRange": "9 - 12 months",
+        "ageRange": "9 months",
         "targetAgeMonths": 9,
         "vaccineName": "MMR 1",
-        "fullVaccineName": "MMR 1 (Measles, Mumps, Rubella)",
-        "route": "Upper Arm Injection",
-        "fullRoute": "Subcutaneous (Upper arm)",
-        "diseases": "Measles, Mumps and Rubella prevention",
+        "fullVaccineName": "MMR 1",
+        "route": "Subcutaneous (under the skin)",
+        "fullRoute": "Subcutaneous (under the skin)",
+        "diseases": "Measles, mumps, and rubella",
         "expectedReactions": "Delayed mild rash or fever 6-10 days later. Rare immediate symptoms.",
         "severityLevel": "Low Risk",
         "batchNumber": "MMR-2025-X1",
-        "dosage": "0.5 ml Subcutaneous"
+        "dosage": "0.5 ml Subcutaneous",
+        "vaccines": [
+            {
+                "name": "MMR 1",
+                "route": "Subcutaneous (under the skin)",
+                "diseases": "Measles, mumps, and rubella"
+            }
+        ]
     },
     {
         "id": "vax-6",
         "milestone": "12 MONTHS",
         "ageRange": "12 months",
         "targetAgeMonths": 12,
-        "vaccineName": "Live JE (Japanese Encephalitis)",
-        "fullVaccineName": "JE (Live Japanese Encephalitis)",
-        "route": "Subcutaneous Injection",
+        "vaccineName": "JE (live vaccine)",
+        "fullVaccineName": "JE (live vaccine)",
+        "route": "Subcutaneous",
         "fullRoute": "Subcutaneous",
-        "diseases": "Viral encephalitis transmitted by mosquitoes",
+        "diseases": "Japanese encephalitis",
         "expectedReactions": "Local headache or low-grade fever within 24-48 hours.",
         "severityLevel": "Low Risk",
         "batchNumber": "JE-8820-K",
-        "dosage": "0.5 ml Subcutaneous"
+        "dosage": "0.5 ml Subcutaneous",
+        "vaccines": [
+            {
+                "name": "JE (live vaccine)",
+                "route": "Subcutaneous",
+                "diseases": "Japanese encephalitis"
+            }
+        ]
     },
     {
         "id": "vax-7",
         "milestone": "18 MONTHS",
         "ageRange": "18 months",
         "targetAgeMonths": 18,
-        "vaccineName": "DPT + OPV 4",
-        "fullVaccineName": "DPT Booster & OPV 4",
-        "route": "Thigh Injection & Oral Drops",
-        "fullRoute": "Intramuscular (Anterolateral thigh / Deltoid)",
-        "diseases": "Secondary MMR Booster & Whooping Cough Immunity",
+        "vaccineName": "DTP + OPV 4",
+        "fullVaccineName": "DTP & OPV 4",
+        "route": "DTP: Intramuscular | OPV 4: Oral",
+        "fullRoute": "DTP: Intramuscular | OPV 4: Oral",
+        "diseases": "DTP: Diphtheria, tetanus, and pertussis | OPV 4: Poliomyelitis (polio)",
         "expectedReactions": "Localized swelling, transient irritability, fever peak ~8-14 hours.",
         "severityLevel": "Moderate Assessment Advised",
         "batchNumber": "PNT-DPT-18",
-        "dosage": "0.5 ml DPT IM + 0.5 ml MMR SC + 2 drops OPV"
+        "dosage": "0.5 ml DTP IM + 2 drops OPV",
+        "vaccines": [
+            {
+                "name": "DTP",
+                "route": "Intramuscular",
+                "diseases": "Diphtheria, tetanus, and pertussis"
+            },
+            {
+                "name": "OPV 4",
+                "route": "Oral",
+                "diseases": "Poliomyelitis (polio)"
+            }
+        ]
     },
     {
         "id": "vax-8",
-        "milestone": "3 YEARS",
-        "ageRange": "36 months",
+        "milestone": "36 MONTHS (3 YEARS)",
+        "ageRange": "36 months (3 years)",
         "targetAgeMonths": 36,
         "vaccineName": "MMR 2",
-        "fullVaccineName": "JE Booster (if required)",
-        "route": "Subcutaneous Injection",
+        "fullVaccineName": "MMR 2",
+        "route": "Subcutaneous",
         "fullRoute": "Subcutaneous",
-        "diseases": "Long-term immunity maintenance against JE",
+        "diseases": "Measles, mumps, and rubella",
         "expectedReactions": "Rare mild arm tenderness.",
         "severityLevel": "Low Risk",
-        "batchNumber": "JE-BST-3Y",
-        "dosage": "0.5 ml Subcutaneous"
+        "batchNumber": "MMR-BST-3Y",
+        "dosage": "0.5 ml Subcutaneous",
+        "vaccines": [
+            {
+                "name": "MMR 2",
+                "route": "Subcutaneous",
+                "diseases": "Measles, mumps, and rubella"
+            }
+        ]
     },
     {
         "id": "vax-9",
-        "milestone": "5 YEARS",
-        "ageRange": "Prior to school entry",
+        "milestone": "60 MONTHS (5 YEARS)",
+        "ageRange": "60 months (5 years)",
         "targetAgeMonths": 60,
-        "vaccineName": "DT + OPV 5 Booster",
-        "fullVaccineName": "DT & OPV 5 Booster",
-        "route": "Arm Injection & Oral Drops",
-        "fullRoute": "Intramuscular & Oral",
-        "diseases": "Diphtheria, Tetanus school-age defense",
+        "vaccineName": "DT + OPV 5",
+        "fullVaccineName": "DT & OPV 5",
+        "route": "DT: Intramuscular | OPV 5: Oral",
+        "fullRoute": "DT: Intramuscular | OPV 5: Oral",
+        "diseases": "DT: Diphtheria and tetanus | OPV 5: Poliomyelitis (polio)",
         "expectedReactions": "Localized stiffness in arm, redness, low-grade temperature.",
         "severityLevel": "Low Risk",
         "batchNumber": "DT-OPV-5Y",
-        "dosage": "0.5 ml DT IM + 2 drops OPV"
+        "dosage": "0.5 ml DT IM + 2 drops OPV",
+        "vaccines": [
+            {
+                "name": "DT",
+                "route": "Intramuscular",
+                "diseases": "Diphtheria and tetanus"
+            },
+            {
+                "name": "OPV 5",
+                "route": "Oral",
+                "diseases": "Poliomyelitis (polio)"
+            }
+        ]
     }
 ]
 
@@ -256,7 +356,8 @@ def generate_vaccine_schedule(birth_date_str: str, vaccine_records: Optional[Dic
                     batchNumber=vax["batchNumber"],
                     dosage=vax.get("dosage"),
                     isClickable=is_clickable,
-                    reaction=rec.get("reaction")
+                    reaction=rec.get("reaction"),
+                    vaccines=vax.get("vaccines")
                 )
             )
             # Crucial: continue without consuming or altering prev_is_completed,
@@ -320,7 +421,8 @@ def generate_vaccine_schedule(birth_date_str: str, vaccine_records: Optional[Dic
                 batchNumber=vax["batchNumber"],
                 dosage=vax.get("dosage"),
                 isClickable=is_clickable,
-                reaction=rec.get("reaction")
+                reaction=rec.get("reaction"),
+                vaccines=vax.get("vaccines")
             )
         )
 

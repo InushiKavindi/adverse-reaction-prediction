@@ -11,6 +11,9 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const currentUser = api.getCurrentUser();
     setUser(currentUser);
+    api.fetchCurrentUser().then((freshUser) => {
+      if (freshUser) setUser(freshUser);
+    }).catch(() => {});
   }, []);
 
   const login = async (username, password) => {

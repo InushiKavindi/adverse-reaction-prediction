@@ -11,7 +11,6 @@ import {
   Baby,
   Plus,
   Mail,
-  Phone,
   Shield,
   Heart,
   Check,
@@ -89,15 +88,8 @@ export default function ProfileView() {
                   <Mail className="w-4 h-4 text-slate-400" /> Email
                 </span>
                 <span className="font-semibold text-slate-800">
-                  {user?.email || "ben.parent@vaxcare.health"}
+                  {user?.email && user.email !== "sarah@example.com" ? user.email : "sarah@gmail.com"}
                 </span>
-              </div>
-
-              <div className="flex items-center justify-between py-2 border-b border-slate-50">
-                <span className="flex items-center gap-2 text-slate-400 font-medium">
-                  <Phone className="w-4 h-4 text-slate-400" /> Emergency Contact
-                </span>
-                <span className="font-semibold text-slate-800">+94 77 123 4567</span>
               </div>
 
               <div className="flex items-center justify-between py-2 border-b border-slate-50">

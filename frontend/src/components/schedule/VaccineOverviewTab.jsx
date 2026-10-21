@@ -1,9 +1,10 @@
 import React from "react";
-import { Calendar, Syringe, ShieldCheck, Activity, Clock, CheckCircle2, Plus } from "lucide-react";
+import { Calendar, Syringe, Activity, Clock, CheckCircle2, Plus } from "lucide-react";
 import { Card, CardTitle, CardDescription } from "../ui/card";
 import { Button } from "../ui/button";
 import { TabsContent } from "../ui/tabs";
 import { formatDisplayDate, calculateScheduledDateFromDob } from "./vaccineUtils";
+import { VACCINE_SCHEDULE } from "../../services/mockData";
 
 export default function VaccineOverviewTab({
   vaccine,
@@ -17,6 +18,10 @@ export default function VaccineOverviewTab({
   const isFirstVaccine = !isBcg2 && (vaccine?.id === "vax-1" || (vaccine?.vaccineName?.toLowerCase().includes("bcg") && !vaccine?.vaccineName?.toLowerCase().includes("bcg 2") && !vaccine?.vaccineName?.toLowerCase().includes("bcg2")));
   const customDate = vaccine?.customScheduledDate || vaccine?.reaction?.scheduledDate || null;
   const hasCustomDate = Boolean(customDate);
+  const vaxList = (vaccine?.vaccines && vaccine.vaccines.length > 0)
+    ? vaccine.vaccines
+    : (VACCINE_SCHEDULE.find((s) => s.id === vaccine?.id)?.vaccines)
+    || (vaccine?.vaccineName ? [{ name: vaccine.vaccineName, route: vaccine.route, diseases: vaccine.diseases }] : []);
 
   return (
     <TabsContent value="overview" className="space-y-3.5 pt-1">
@@ -123,38 +128,42 @@ export default function VaccineOverviewTab({
         </div>
       </Card>
 
-      {/* Route & Administration Site */}
-      <Card className="p-4 bg-white border-slate-100 rounded-2xl shadow-xs">
-        <div className="flex items-center gap-2 text-slate-400 text-xs font-bold mb-1">
-          <Syringe className="w-3.5 h-3.5 text-pink-500 shrink-0" />
-          <span>Route & Administration Site</span>
-        </div>
-        <p className="text-sm font-extrabold text-slate-800">{vaccine.route}</p>
-        <p className="text-[11px] text-slate-400 mt-0.5">{vaccine.fullRoute || "Pediatric immunization protocol"}</p>
-      </Card>
-
-      {/* Diseases Prevented & Coverage Strip */}
-      <Card className="bg-white border-slate-100 rounded-2xl p-4 sm:p-5 shadow-xs space-y-2.5">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center font-bold shrink-0">
-            <ShieldCheck className="w-4 h-4" />
+      {/* Specific Vaccines Breakdown */}
+      {vaxList && vaxList.length > 0 && (
+        <Card className="bg-white border-slate-100 rounded-2xl p-4 sm:p-5 shadow-xs space-y-3">
+          <div className="flex items-center gap-2.5 pb-2 border-b border-slate-100">
+            <div className="w-7 h-7 rounded-xl bg-pink-50 border border-pink-200/80 text-[#ff2d78] flex items-center justify-center font-bold shrink-0">
+              <Syringe className="w-3.5 h-3.5" />
+            </div>
+            <div>
+              <CardTitle className="text-sm sm:text-base font-bold text-slate-900">
+                Vaccine Administration & Indications
+              </CardTitle>
+              <CardDescription className="text-[11px] text-slate-400">
+                Route of administration and specific diseases protected against for each vaccine
+              </CardDescription>
+            </div>
           </div>
-          <div>
-            <CardTitle className="text-sm sm:text-base font-bold text-slate-900">Diseases Prevented & Coverage</CardTitle>
-            <CardDescription className="text-[11px] text-slate-400">Target infectious pathogens and pediatric immunization coverage</CardDescription>
+
+          <div className="space-y-3">
+            {vaxList.map((vItem, idx) => (
+              <div key={idx} className="p-3.5 bg-slate-50/80 border border-slate-200/70 rounded-xl space-y-1.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-xs sm:text-sm font-bold text-slate-900">{vItem.name}</span>
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-pink-700 bg-pink-50 border border-pink-200/70 px-2.5 py-0.5 rounded-full">
+                    <Syringe className="w-3 h-3 text-[#ff2d78]" />
+                    <span>{vItem.route}</span>
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  <span className="font-semibold text-slate-700">Diseases protected against: </span>
+                  {vItem.diseases}
+                </p>
+              </div>
+            ))}
           </div>
-        </div>
-
-        <div className="p-3 bg-sky-50/70 border border-sky-100 rounded-xl">
-          <p className="text-xs sm:text-sm font-semibold text-slate-800 leading-relaxed">
-            {vaccine.diseases}
-          </p>
-        </div>
-
-        <p className="text-[11px] sm:text-xs text-slate-500 leading-normal">
-          Primary immunization establishes long-lasting antibodies and cell-mediated immunity against severe pediatric morbidities. Routine adherence strictly prevents breakout infection cycles.
-        </p>
-      </Card>
+        </Card>
+      )}
 
       {/* Recorded Reaction Banner if present */}
       {recordedReaction && recordedReaction.hasReaction && (

@@ -14,8 +14,8 @@ export function mapVaccineToModelType(vaccine) {
   if (id === "vax-4" || name.includes("pentavalent 3") || name.includes("pentavalent3") || name.includes("opv 3 + pentavalent")) return "Pentavalent3,OPV3";
   if (id === "vax-5" || name.includes("mmr 1") || name.includes("mmr1")) return "MMR1";
   if (id === "vax-6" || name.includes("live je") || name.includes("je (live")) return "JE";
-  if (id === "vax-7" || name.includes("dpt") || name.includes("opv 4")) return "DPT,OPV4";
-  if (id === "vax-8" || name.includes("je booster") || name.includes("je")) return "JE";
+  if (id === "vax-7" || name.includes("dtp") || name.includes("dpt") || name.includes("opv 4")) return "DPT,OPV4";
+  if (id === "vax-8" || name.includes("mmr 2") || name.includes("mmr2")) return "MMR2";
   if (id === "vax-9" || name.includes("dt") || name.includes("opv 5")) return "DT,OPV5";
 
   if (name.includes("mmr 2") || name.includes("mmr2")) return "MMR2";

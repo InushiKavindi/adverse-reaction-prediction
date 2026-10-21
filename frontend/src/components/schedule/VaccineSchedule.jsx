@@ -303,7 +303,7 @@ export default function VaccineSchedule({ onSelectVaccine }) {
                         )}
                       </div>
                       {item.diseases && (
-                        <p className="text-xs sm:text-sm text-slate-500 mt-1 line-clamp-1">
+                        <p className="text-xs sm:text-sm text-slate-500 mt-1 line-clamp-2" title={item.diseases}>
                           <span className="text-slate-400 font-normal">Protects against: </span>
                           <span className="font-semibold text-slate-700">{item.diseases}</span>
                         </p>
@@ -312,7 +312,7 @@ export default function VaccineSchedule({ onSelectVaccine }) {
 
                     {/* Clinical Details Row (2-column responsive strip) */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 pt-3 mt-1 border-t border-slate-100 text-xs text-slate-600 font-medium">
-                      <div className="flex items-center gap-2 min-w-0">
+                      <div className="flex items-center gap-2 min-w-0" title={item.route}>
                         <Syringe className="w-3.5 h-3.5 text-pink-500 shrink-0" />
                         <span className="truncate">
                           <span className="text-slate-400">Route:</span> {item.route}
