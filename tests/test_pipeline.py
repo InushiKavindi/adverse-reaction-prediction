@@ -33,7 +33,7 @@ def run_pipeline() -> None:
 
     # 3. Train/Test Split
     print("\n[3/5] Splitting data into train/test sets...")
-    X_train, X_test, y_train, y_test = split_data(X, y, test_size=0.2, random_state=42)
+    X_train, X_test, y_train, y_test = split_data(X, y, test_size=0.19, random_state=42)
     print(f"Train size: {len(X_train)}, Test size: {len(X_test)}")
 
     # 4. Train Model
@@ -43,7 +43,7 @@ def run_pipeline() -> None:
         random_seed=42,
         n_estimators=200,
         max_depth=3,
-        min_samples_leaf=1
+        min_samples_leaf=7
     )
     print("Random Forest model training completed successfully.")
 
@@ -73,32 +73,68 @@ def run_pipeline() -> None:
     wrong_cases = comparison_df[~comparison_df["is_exact_match"]]
 
     print(f"Total Test Samples: {len(comparison_df)}")
-    print(f"Exact Matches (All 8 symptoms correct): {len(exact_matches)}")
+    print(f"Exact Matches (All {len(TARGET_COLS)} symptoms correct): {len(exact_matches)}")
     print(f"Misclassified Cases: {len(wrong_cases)}")
 
     print("\nSample Detailed Predictions vs Actual CSV Rows:")
     display_cols = ["csv_line_number", "vaccine_type", "actual_symptoms", "predicted_symptoms", "is_exact_match"]
     print(comparison_df[display_cols].to_string(index=False))
 
-    # Demonstrate probability scoring for the first test sample
+    # Demonstrate probability scoring for random test samples
     print("\n" + "=" * 60)
-    print("PROBABILITY SCORE DEMONSTRATION")
+    print("PROBABILITY SCORE DEMONSTRATION (Random Forest)")
     print("=" * 60)
     
     from src.symptom_model import predict_proba
+    import random
     y_proba = predict_proba(model, X_test)
     
-    sample_idx = 0
-    print(f"Sample features: {X_test.iloc[sample_idx].to_dict()}")
-    print("Possible reactions predicted as scores:")
+    # Pick 3 random samples to show variety
+    random_indices = random.sample(range(len(X_test)), 3)
     
-    sample_probs = y_proba[sample_idx]
+    for i, sample_idx in enumerate(random_indices, 1):
+        print(f"\n--- Random Test Sample {i} ---")
+        print(f"Features: {X_test.iloc[sample_idx].to_dict()}")
+        
+        sample_probs = y_proba[sample_idx]
+        
+        # Sort by probability descending
+        scored_symptoms = [(TARGET_COLS[j].replace('_', ' ').title(), sample_probs[j]) for j in range(len(TARGET_COLS))]
+        scored_symptoms.sort(key=lambda x: x[1], reverse=True)
+        
+        print("Predicted reactions:")
+        for symptom_name, prob in scored_symptoms:
+            if prob >= 0.01: # Show if 1% or higher
+                print(f"  {symptom_name} ({prob * 100:.0f}%)")
+
+    # ----- CUSTOM CASE PREDICTION -----
+    print("\n" + "=" * 60)
+    print("CUSTOM CASE PREDICTION DEMONSTRATION")
+    print("=" * 60)
     
-    # Sort by probability descending
-    scored_symptoms = [(TARGET_COLS[i].replace('_', ' ').title(), sample_probs[i]) for i in range(len(TARGET_COLS))]
-    scored_symptoms.sort(key=lambda x: x[1], reverse=True)
+    # You can change these values to test different cases!
+    custom_patient = {
+        'age_months': 0, 
+        'sex': 'F', 
+        'vaccine_type': 'BCG1', 
+        'previous_reaction': 'No', 
+        'allergy': 'No', 
+        'current_illness': 'Yes',
+        'medication': 'No'
+    }
     
-    for symptom_name, prob in scored_symptoms:
+    # Convert to DataFrame
+    custom_df = pd.DataFrame([custom_patient])
+    
+    custom_probs = predict_proba(model, custom_df)[0]
+    
+    print(f"Custom features: {custom_patient}")
+    print("Predicted reactions for this custom case:")
+    
+    custom_scored_symptoms = [(TARGET_COLS[i].replace('_', ' ').title(), custom_probs[i]) for i in range(len(TARGET_COLS))]
+    custom_scored_symptoms.sort(key=lambda x: x[1], reverse=True)
+    
+    for symptom_name, prob in custom_scored_symptoms:
         print(f"{symptom_name} ({prob * 100:.0f}%)")
 
 
