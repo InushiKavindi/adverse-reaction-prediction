@@ -1,54 +1,139 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
-import { INITIAL_CHILDREN } from "../services/mockData";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { api } from "../services/api";
+import { useAuth } from "./AuthContext";
 
 const ChildContext = createContext(null);
-const STORAGE_KEY = "vaxcare_children_list";
 const ACTIVE_KEY = "vaxcare_active_child_id";
 
 export function ChildProvider({ children }) {
-  const [childrenList, setChildrenList] = useState(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      return stored ? JSON.parse(stored) : INITIAL_CHILDREN;
-    } catch {
-      return INITIAL_CHILDREN;
-    }
-  });
+  const { user } = useAuth();
+  const [childrenList, setChildrenList] = useState([]);
 
   const [activeChildId, setActiveChildId] = useState(() => {
     try {
-      const stored = localStorage.getItem(ACTIVE_KEY);
-      return stored || (INITIAL_CHILDREN[0] ? INITIAL_CHILDREN[0].id : null);
+      return localStorage.getItem(ACTIVE_KEY) || null;
     } catch {
-      return INITIAL_CHILDREN[0]?.id || null;
+      return null;
     }
   });
+  const [schedule, setSchedule] = useState([]);
+  const [loadingSchedule, setLoadingSchedule] = useState(false);
+  const [loadingChildren, setLoadingChildren] = useState(true);
+  const [isAddChildModalOpen, setIsAddChildModalOpen] = useState(false);
+
+  // 1. Fetch children from backend
+  const loadChildren = useCallback(async () => {
+    setLoadingChildren(true);
+    try {
+      const data = await api.getChildren();
+      setChildrenList(data || []);
+      if (data && data.length > 0) {
+        // Keep current active if still valid, or default to first
+        const currentStored = localStorage.getItem(ACTIVE_KEY);
+        const exists = data.some((c) => String(c.id) === String(currentStored));
+        if (exists) {
+          setActiveChildId(currentStored);
+        } else {
+          setActiveChildId(String(data[0].id));
+          localStorage.setItem(ACTIVE_KEY, String(data[0].id));
+        }
+      } else {
+        setActiveChildId(null);
+      }
+    } catch (err) {
+      console.error("Failed to load children from backend:", err);
+    } finally {
+      setLoadingChildren(false);
+    }
+  }, []);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(childrenList));
-  }, [childrenList]);
+    loadChildren();
+  }, [user, loadChildren]);
 
+
+  // Sync activeChildId to localStorage
   useEffect(() => {
     if (activeChildId) {
-      localStorage.setItem(ACTIVE_KEY, activeChildId);
+      localStorage.setItem(ACTIVE_KEY, String(activeChildId));
     }
   }, [activeChildId]);
 
-  const activeChild = childrenList.find((c) => c.id === activeChildId) || childrenList[0] || null;
+  const activeChild = childrenList.find((c) => String(c.id) === String(activeChildId)) || childrenList[0] || null;
 
-  const addChild = (childData) => {
-    const newChild = {
-      ...childData,
-      id: "child-" + Date.now()
-    };
-    setChildrenList((prev) => [...prev, newChild]);
-    setActiveChildId(newChild.id);
+  // 2. Fetch auto-calculated schedule for the active child from backend
+  const loadSchedule = useCallback(async (childId) => {
+    if (!childId) {
+      setSchedule([]);
+      return;
+    }
+    setLoadingSchedule(true);
+    try {
+      const scheduleData = await api.getChildSchedule(childId);
+      setSchedule(scheduleData || []);
+    } catch (err) {
+      console.error("Failed to load schedule from backend:", err);
+    } finally {
+      setLoadingSchedule(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeChild?.id) {
+      loadSchedule(activeChild.id);
+    } else {
+      setSchedule([]);
+    }
+  }, [activeChild?.id, loadSchedule]);
+
+  // 3. Add child profile to backend
+  const addChild = async (childData) => {
+    const res = await api.createChild(childData);
+    if (res.success && res.data) {
+      const newChild = res.data;
+      setChildrenList((prev) => [...prev, newChild]);
+      setActiveChildId(String(newChild.id));
+      localStorage.setItem(ACTIVE_KEY, String(newChild.id));
+      // Load auto-calculated schedule for newly created child
+      await loadSchedule(newChild.id);
+      return { success: true, data: newChild };
+    }
+    return res;
   };
 
-  const updateChild = (id, updatedData) => {
-    setChildrenList((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, ...updatedData } : c))
-    );
+  // 4. Update child profile
+  const updateChild = async (id, updatedData) => {
+    const res = await api.updateChild(id, updatedData);
+    if (res.success && res.data) {
+      setChildrenList((prev) =>
+        prev.map((c) => (String(c.id) === String(id) ? { ...c, ...res.data } : c))
+      );
+      if (String(activeChildId) === String(id)) {
+        await loadSchedule(id);
+      }
+    }
+    return res;
+  };
+
+  // 5. Update vaccination milestone status in backend
+  const updateVaccineStatus = async (vaxId, newStatus, dateCompleted = null, reaction = null) => {
+    if (!activeChild?.id) return;
+    try {
+      const updatedSchedule = await api.updateChildVaccineStatus(
+        activeChild.id,
+        vaxId,
+        newStatus,
+        dateCompleted,
+        reaction
+      );
+      if (updatedSchedule && Array.isArray(updatedSchedule)) {
+        setSchedule(updatedSchedule);
+      } else {
+        await loadSchedule(activeChild.id);
+      }
+    } catch (err) {
+      console.error("Failed to update vaccine status:", err);
+    }
   };
 
   return (
@@ -59,7 +144,15 @@ export function ChildProvider({ children }) {
         activeChildId,
         setActiveChildId,
         addChild,
-        updateChild
+        updateChild,
+        loadChildren,
+        schedule,
+        loadingSchedule,
+        loadingChildren,
+        refreshSchedule: () => loadSchedule(activeChild?.id),
+        updateVaccineStatus,
+        isAddChildModalOpen,
+        setIsAddChildModalOpen
       }}
     >
       {children}

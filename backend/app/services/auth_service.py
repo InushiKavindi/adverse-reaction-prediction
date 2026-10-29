@@ -22,11 +22,18 @@ class AuthService:
         self.token_service = token_service
 
     def authenticate(self, username: str, plain_password: str) -> Token:
-        user = self.user_repo.get_by_username(username)
+        user = None
+        if "@" in username:
+            user = self.user_repo.get_by_email(username)
+        if not user:
+            user = self.user_repo.get_by_username(username)
+        if not user:
+            user = self.user_repo.get_by_email(username)
+
         if not user or not self.password_hasher.verify(plain_password, user.hashed_password):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect username or password",
+                detail="Incorrect email or password",
                 headers={"WWW-Authenticate": "Bearer"},
             )
 

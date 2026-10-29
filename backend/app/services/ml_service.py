@@ -1,5 +1,6 @@
 import os
 import sys
+import logging
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 import joblib
@@ -72,6 +73,10 @@ class JoblibModelLoader(IModelLoader):
 
         return self._symptom_model, self._onset_model
 
+    def get_raw_models(self) -> Tuple[Any, Any]:
+        """Return the loaded model objects for XAI inspection."""
+        return self.load_models()
+
     def is_ready(self) -> bool:
         try:
             m1, m2 = self.load_models()
@@ -100,6 +105,39 @@ class TrainedModelInferenceEngine(IInferenceEngine):
         return y_pred_onset
 
 
+def normalize_binary(val: Any) -> str:
+    s = str(val or "").strip().lower()
+    if s in ["", "no", "none", "none reported", "nil", "false", "0", "n/a", "no allergies", "negative"]:
+        return "No"
+    return "Yes"
+
+def normalize_vaccine_type(val: Any) -> str:
+    s = str(val or "").strip()
+    known = [
+        "BCG1", "BCG2", "Pentavalent1,OPV1", "Pentavalent2,OPV2,IPV",
+        "Pentavalent3,OPV3", "MMR1", "JE", "DPT,OPV4", "DT,OPV5", "MMR2"
+    ]
+    if s in known:
+        return s
+    low = s.lower()
+    if "bcg" in low:
+        return "BCG2" if "2" in low else "BCG1"
+    if "pentavalent" in low or "penta" in low:
+        if "3" in low:
+            return "Pentavalent3,OPV3"
+        if "2" in low:
+            return "Pentavalent2,OPV2,IPV"
+        return "Pentavalent1,OPV1"
+    if "mmr" in low:
+        return "MMR2" if "2" in low else "MMR1"
+    if "je" in low:
+        return "JE"
+    if "dpt" in low:
+        return "DPT,OPV4"
+    if "dt" in low:
+        return "DT,OPV5"
+    return s
+
 class PredictionService(IPredictionService):
     """
     High-level prediction service orchestrating inference, risk assessment, and persistence.
@@ -119,17 +157,27 @@ class PredictionService(IPredictionService):
     def predict_and_record(
         self, 
         patient: PatientInput, 
-        user_id: Optional[int] = None
+        user_id: Optional[int] = None,
+        save_record: bool = True,
+        include_explanation: bool = False,
+        model_loader: Optional[IModelLoader] = None,
     ) -> PredictionResponse:
-        # 1. Format input DataFrame
+        # 1. Format input DataFrame with clinical normalization
+        vax_type = normalize_vaccine_type(patient.vaccine_type)
+        prev_rxn = normalize_binary(patient.previous_reaction)
+        allergy_val = normalize_binary(patient.allergy)
+        illness_val = normalize_binary(patient.current_illness)
+        med_val = normalize_binary(patient.medication)
+        sex_val = "M" if str(patient.sex).strip().upper().startswith("M") else "F"
+
         input_dict = {
             "age_months": float(patient.age_months),
-            "sex": str(patient.sex).strip(),
-            "vaccine_type": str(patient.vaccine_type).strip(),
-            "previous_reaction": str(patient.previous_reaction).strip(),
-            "allergy": str(patient.allergy).strip(),
-            "current_illness": str(patient.current_illness).strip(),
-            "medication": str(patient.medication).strip(),
+            "sex": sex_val,
+            "vaccine_type": vax_type,
+            "previous_reaction": prev_rxn,
+            "allergy": allergy_val,
+            "current_illness": illness_val,
+            "medication": med_val,
         }
         df_input = pd.DataFrame([input_dict])
 
@@ -141,7 +189,8 @@ class PredictionService(IPredictionService):
         probabilities_dict: Dict[str, float] = {}
         for idx, col in enumerate(TARGET_COLS):
             val = float(y_pred_proba[idx]) if idx < len(y_pred_proba) else 0.0
-            probabilities_dict[col] = round(max(0.0, min(1.0, val)), 4)
+            # Cap probability at 0.92 so no probability ever reaches 100%
+            probabilities_dict[col] = round(max(0.0, min(0.92, val)), 4)
 
         onset_dict: Dict[str, float] = {}
         for idx, col in enumerate(ONSET_COLS):
@@ -176,7 +225,7 @@ class PredictionService(IPredictionService):
                     predicted=is_pred_positive,
                     probability=prob,
                     onset_hours=onset_val if col != "no_reaction" else None,
-                    onset_description=onset_desc if is_pred_positive and col != "no_reaction" else None
+                    onset_description=onset_desc if col != "no_reaction" else None
                 )
             )
 
@@ -187,10 +236,10 @@ class PredictionService(IPredictionService):
             risk_level, active_positive_symptoms, probabilities_dict, onset_dict
         )
 
-        # 5. Persist prediction if repository is provided
+        # 5. Persist prediction if repository is provided and save_record is True
         created_id = None
         created_at = None
-        if self.prediction_repo:
+        if self.prediction_repo and save_record:
             record = PredictionRecord(
                 user_id=user_id,
                 patient_identifier=patient.patient_identifier,
@@ -213,6 +262,14 @@ class PredictionService(IPredictionService):
             created_id = saved.id
             created_at = saved.created_at
 
+        # 6. Generate XAI explanation if requested
+        explanation = None
+        if include_explanation:
+            explanation = self._generate_explanation(
+                model_loader, df_input, probabilities_dict, onset_dict,
+                active_positive_symptoms, risk_level
+            )
+
         return PredictionResponse(
             id=created_id,
             patient_identifier=patient.patient_identifier,
@@ -222,8 +279,56 @@ class PredictionService(IPredictionService):
             symptoms=items,
             raw_probabilities=probabilities_dict,
             raw_onsets=onset_dict,
-            created_at=created_at
+            created_at=created_at,
+            explanation=explanation,
         )
+
+    def _generate_explanation(
+        self,
+        model_loader: Optional[IModelLoader],
+        df_input: pd.DataFrame,
+        probabilities_dict: Dict[str, float],
+        onset_dict: Dict[str, float],
+        active_symptoms: List[str],
+        risk_level: str,
+    ) -> Optional[Dict[str, Any]]:
+        """Generate unified XAI explanation from both models."""
+        xai_logger = logging.getLogger(__name__)
+        try:
+            from backend.app.services.xai_service import generate_unified_explanation
+            from backend.app.services.explanation_generator import generate_full_explanation
+
+            if model_loader is None:
+                xai_logger.warning("No model_loader provided for XAI explanation")
+                return None
+
+            symptom_model, onset_model = model_loader.get_raw_models()
+
+            # Generate raw XAI results
+            xai_results = generate_unified_explanation(
+                symptom_model=symptom_model,
+                onset_models=onset_model if isinstance(onset_model, dict) else {},
+                input_df=df_input,
+                probabilities=probabilities_dict,
+                onset_dict=onset_dict,
+                target_cols=TARGET_COLS,
+                active_symptoms=active_symptoms,
+            )
+
+            # Transform into parent-friendly explanation
+            explanation = generate_full_explanation(
+                xai_results=xai_results,
+                probabilities=probabilities_dict,
+                onset_dict=onset_dict,
+                active_symptoms=active_symptoms,
+                risk_level=risk_level,
+            )
+
+            return explanation
+
+        except Exception as e:
+            xai_logger.error(f"XAI explanation generation failed: {e}")
+            return None
 
 # Default global instances for convenience / backward compatibility
 default_model_loader = JoblibModelLoader()

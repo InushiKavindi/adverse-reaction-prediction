@@ -5,12 +5,26 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => api.getCurrentUser());
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(() => !api.getCurrentUser());
   const [authMode, setAuthMode] = useState("login"); // 'login' | 'register'
 
   useEffect(() => {
     const currentUser = api.getCurrentUser();
     setUser(currentUser);
+    if (!currentUser) {
+      setIsAuthModalOpen(true);
+      setAuthMode("login");
+    } else {
+      api.fetchCurrentUser().then((freshUser) => {
+        if (freshUser) {
+          setUser(freshUser);
+        } else {
+          setUser(null);
+          setIsAuthModalOpen(true);
+          setAuthMode("login");
+        }
+      }).catch(() => {});
+    }
   }, []);
 
   const login = async (username, password) => {

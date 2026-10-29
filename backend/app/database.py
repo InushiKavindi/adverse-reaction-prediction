@@ -42,4 +42,19 @@ def init_db() -> None:
     # Import all models to ensure they are registered with Base metadata
     import backend.app.models.user # noqa: F401
     import backend.app.models.prediction # noqa: F401
+    import backend.app.models.child # noqa: F401
     Base.metadata.create_all(bind=engine)
+
+    try:
+        from sqlalchemy import inspect, text
+        inspector = inspect(engine)
+        if "children" in inspector.get_table_names():
+            columns = [col["name"] for col in inspector.get_columns("children")]
+            with engine.connect() as conn:
+                if "current_illness" not in columns:
+                    conn.execute(text("ALTER TABLE children ADD COLUMN current_illness VARCHAR(500) DEFAULT ''"))
+                if "current_medication" not in columns:
+                    conn.execute(text("ALTER TABLE children ADD COLUMN current_medication VARCHAR(500) DEFAULT ''"))
+                conn.commit()
+    except Exception as e:
+        print(f"SQLite migration check warning: {e}")

@@ -1,19 +1,23 @@
 import React from "react";
 import { useChild } from "../../context/ChildContext";
 import { api } from "../../services/api";
+import { Card } from "../ui/card";
+import { Button } from "../ui/button";
+import { Badge } from "../ui/badge";
 import { Calendar, Clock, AlertCircle, CheckCircle, ArrowUpRight } from "lucide-react";
 
-export default function QuickSchedule({ onSelectVaccineForScreening, onViewFullSchedule }) {
-  const { activeChild } = useChild();
-  const schedule = api.getSchedule();
+export default function QuickSchedule({ onViewFullSchedule }) {
+  const { activeChild, schedule = [] } = useChild();
 
   const completedCount = schedule.filter((s) => s.status === "completed").length;
-  const progressPercent = Math.round((completedCount / schedule.length) * 100);
+  const totalCount = schedule.length || 1;
+  const progressPercent = Math.round((completedCount / totalCount) * 100);
 
   const dueVaccines = schedule.filter((s) => s.status === "due" || s.status === "upcoming").slice(0, 3);
 
+
   return (
-    <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-xs">
+    <Card className="bg-white border-slate-100 rounded-3xl p-6 shadow-xs">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
           <h3 className="text-lg font-bold text-slate-900">
@@ -26,7 +30,7 @@ export default function QuickSchedule({ onSelectVaccineForScreening, onViewFullS
 
         <button
           onClick={onViewFullSchedule}
-          className="text-xs font-bold text-sky-600 hover:text-sky-700 flex items-center gap-1 self-start sm:self-auto"
+          className="text-xs font-bold text-sky-600 hover:text-sky-700 flex items-center gap-1 self-start sm:self-auto cursor-pointer"
         >
           Full Timeline <ArrowUpRight className="w-3.5 h-3.5" />
         </button>
@@ -46,7 +50,7 @@ export default function QuickSchedule({ onSelectVaccineForScreening, onViewFullS
           const isDue = vax.status === "due";
 
           return (
-            <div
+            <Card
               key={vax.id}
               className={`p-4 rounded-2xl border transition-all ${
                 isDue
@@ -58,15 +62,12 @@ export default function QuickSchedule({ onSelectVaccineForScreening, onViewFullS
                 <span className="text-[11px] font-bold text-slate-500">
                   {vax.milestone}
                 </span>
-                <span
-                  className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase ${
-                    isDue
-                      ? "bg-amber-100 text-amber-700 border border-amber-200"
-                      : "bg-slate-200 text-slate-600"
-                  }`}
+                <Badge
+                  variant={isDue ? "warning" : "secondary"}
+                  className="text-[10px] font-extrabold px-2 py-0.5 uppercase"
                 >
                   {isDue ? "Due Now" : "Upcoming"}
-                </span>
+                </Badge>
               </div>
 
               <h4 className="text-sm font-bold text-slate-800 mb-1 truncate" title={vax.vaccineName}>
@@ -76,17 +77,19 @@ export default function QuickSchedule({ onSelectVaccineForScreening, onViewFullS
                 {vax.diseases}
               </p>
 
-              <button
-                onClick={() => onSelectVaccineForScreening(vax.vaccineName)}
-                className="w-full py-1.5 px-3 bg-white hover:bg-sky-50 border border-sky-200 text-sky-700 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 shadow-2xs"
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onViewFullSchedule}
+                className="w-full h-auto py-1.5 px-3 bg-white hover:bg-sky-50 border-sky-200 text-sky-700 hover:text-sky-800 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
               >
-                <span>Check Reaction Risk</span>
+                <span>View in Schedule</span>
                 <ArrowUpRight className="w-3 h-3" />
-              </button>
-            </div>
+              </Button>
+            </Card>
           );
         })}
       </div>
-    </div>
+    </Card>
   );
 }

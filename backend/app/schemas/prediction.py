@@ -31,6 +31,7 @@ class PredictionResponse(BaseModel):
     raw_probabilities: Dict[str, float]
     raw_onsets: Dict[str, float]
     created_at: Optional[datetime] = None
+    explanation: Optional[Dict] = None  # XAI parent-friendly explanation
 
 class PredictionRecordResponse(PredictionResponse):
     id: int
